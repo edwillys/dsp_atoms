@@ -1,9 +1,8 @@
 #pragma once
 
 #include "AudioTypes.h"
-#include <vector>
 
-class CAudioAtomProps
+class CQuarkProps
 {
 public:
     int32_t m_Fs;
@@ -12,8 +11,9 @@ public:
     int32_t m_NumChOut;
     int32_t m_NumCtrlIn;
     int32_t m_NumCtrlOut;
-    
-    CAudioAtomProps(void)
+    int32_t m_NumEl;
+
+    CQuarkProps(void)
     {
         m_Fs = 48000;
         m_BlockSize = 64;
@@ -21,115 +21,148 @@ public:
         m_NumChOut = 0;
         m_NumCtrlIn = 0;
         m_NumCtrlOut = 0;
+        m_NumEl = 0;
     }
-    
-    ~CAudioAtomProps(){}
+
+    ~CQuarkProps() {}
 };
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  */
-//template <class T>
-class CAudioAtom
+template <class T>
+class CQuark
 {
 protected:
-    CAudioAtomProps m_Props;
+    T *m_States = NULL;
+    T *m_Coeffs = NULL;
+    CQuarkProps m_Props;
 
 public:
-
     /**
      * @brief Construct a new Audio Atom object
-     * 
+     *
      */
-    CAudioAtom(){};
+    CQuark(){};
 
     /**
      * @brief Destroy the Audio Atom object
-     * 
+     *
      */
-    ~CAudioAtom(){};
+    ~CQuark(){};
 
     /**
-     * @brief 
-     * 
-     * @param props 
-     * @return int32_t 
+     * @brief
+     *
+     * @param props
+     * @return int32_t
      */
-    virtual int32_t init(const CAudioAtomProps& props) { setProps(props); return 0; };
-    
+    virtual int32_t init(const CQuarkProps &props)
+    {
+        setProps(props);
+        return 0;
+    };
+
     /**
-     * @brief 
-     * 
-     * @param in 
-     * @param out 
+     * @brief
+     *
+     * @param in
+     * @param out
      */
-    virtual void play(float32_t ** const in, float32_t ** const out) = 0;
-    
+    virtual void play(T **const in, T **const out) = 0;
+
     /**
-     * @brief 
-     * 
+     * @brief
+     *
      */
     virtual void idle(void){};
-    
-    /**
-     * @brief 
-     * 
-     * @param out 
-     */
-    virtual void mute(float32_t ** const out);
-    
-    /**
-     * @brief 
-     * 
-     * @param in 
-     * @param out 
-     */
-    virtual void bypass(float32_t ** const in, float32_t ** const out);
 
     /**
-     * @brief 
-     * 
-     * @param index 
-     * @param value 
+     * @brief
+     *
+     * @param out
      */
-    virtual void set(cint32_t index, cint32_t value){};
-    
-    /**
-     * @brief 
-     * 
-     * @param index 
-     * @param values 
-     */
-    virtual void set(cint32_t index, const std::vector<int32_t>& values){};
-    
-    /**
-     * @brief 
-     * 
-     * @param index 
-     * @param value 
-     */
-    virtual void set(cint32_t index, cfloat32_t value){};
+    virtual void mute(T **const out)
+    {
+        if (NULL != out)
+        {
+            for (int32_t ch = 0; ch < m_Props.m_NumChOut; ch++)
+            {
+                for (int32_t i = 0; i < m_Props.m_BlockSize; i++)
+                    out[ch][i] = static_cast<T>(0);
+            }
+        }
+    };
 
     /**
-     * @brief 
-     * 
-     * @param index 
-     * @param values 
+     * @brief
+     *
+     * @param in
+     * @param out
      */
-    virtual void set(cint32_t index, const std::vector<float32_t>& values){};
+    virtual void bypass(T **const in, T **const out)
+    {
+        if (NULL != out)
+        {
+            if (NULL == in)
+            {
+                mute(out);
+            }
+            else
+            {
+                int32_t ind_max = MAX(m_Props.m_NumChOut, m_Props.m_NumChIn);
+                for (int32_t ch = 0; ch < ind_max; ch++)
+                {
+                    for (int32_t i = 0; i < m_Props.m_BlockSize; i++)
+                        out[ch][i] = in[ch][i];
+                }
+                for (int32_t ch = ind_max; ch < m_Props.m_NumChOut; ch++)
+                {
+                    for (int32_t i = 0; i < m_Props.m_BlockSize; i++)
+                        out[ch][i] = static_cast<T>(0);
+                }
+            }
+        }
+    };
+
+    /**
+     * @brief
+     *
+     * @param ch
+     * @param el
+     * @param value
+     */
+    virtual void set(cint32_t ch, cint32_t el, cint32_t value){};
+
+    /**
+     * @brief
+     *
+     * @param ch
+     * @param el
+     * @param value
+     */
+    virtual void set(cint32_t ch, cint32_t el, cfloat32_t value){};
+
+    /**
+     * @brief
+     *
+     * @param params
+     * @param len
+     */
+    virtual void set(void *params, cint32_t len){};
 
     /**
      * @brief Get the object properties
-     * 
-     * @return const CAudioAtomProps& 
+     *
+     * @return const CQuarkProps&
      */
-    const CAudioAtomProps& getProps(void) {return m_Props; };
-    
+    const CQuarkProps &getProps(void) { return m_Props; };
+
     /**
      * @brief Set the object properties
-     * 
-     * @param props 
+     *
+     * @param props
      */
-    void setProps(const CAudioAtomProps& props) { m_Props = props; };
+    void setProps(const CQuarkProps &props) { m_Props = props; };
 };

@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.10)
 project(test)
 
 # set standard
-#set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set(CMAKE_CXX_EXTENSIONS OFF)
 
 # set config flags
@@ -20,9 +20,11 @@ endif()
 
 # search for unit_test_framework
 find_package(Boost REQUIRED COMPONENTS unit_test_framework)
+find_package(SndFile CONFIG REQUIRED)
 
 include_directories(
     ${Boost_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/../src
 )
 
@@ -34,15 +36,12 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/UpFirDownTests.cpp
     ${CMAKE_SOURCE_DIR}/TestUtils.cpp
     ${CMAKE_SOURCE_DIR}/../src/Sample.cpp
-    ${CMAKE_SOURCE_DIR}/../src/AudioAtom.cpp
     ${CMAKE_SOURCE_DIR}/../src/Resampler.cpp
     ${CMAKE_SOURCE_DIR}/../src/UpFirDown.cpp
 )
 
 # indicates the shared library variant
-if (!WIN32)
-    target_compile_definitions(testapp PRIVATE "BOOST_TEST_DYN_LINK=1")
-endif()
+target_compile_definitions(testapp PRIVATE "BOOST_TEST_DYN_LINK=1")
 
 # Only needed if __builtin_assume_aligned is used
 #SET( MY_GCC_FLAGS "-fpermissive")
@@ -50,10 +49,7 @@ endif()
 
 # link Boost libraries to the new target
 target_link_libraries(testapp 
+    PRIVATE
     ${Boost_LIBRARIES}
+    SndFile::sndfile
 )
-
-target_link_libraries(testapp sndfile)
-if (WIN32)
-    target_link_libraries(testapp -static-libgcc -static-libstdc++)
-endif()

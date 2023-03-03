@@ -12,29 +12,6 @@
 #include <sndfile.h>
 
 namespace fs = std::filesystem;
-//=============================================================
-// Reference audio files
-//=============================================================
-namespace NA4v16up5th
-{
-#include "ref/A4v16_up5th.h"
-}
-namespace NA4v16down5th
-{
-#include "ref/A4v16_down5th.h"
-}
-namespace NA4v16up4th
-{
-#include "ref/A4v16_up4th.h"
-}
-namespace NA4v16down4th
-{
-#include "ref/A4v16_down4th.h"
-}
-namespace NA4v16unisson
-{
-#include "ref/A4v16_unisson.h"
-}
 
 //=============================================================
 // Defines
