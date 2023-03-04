@@ -16,7 +16,11 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
+#define CLIP(x, a, b) (MAX(a, MIN(x, b)))
+
+#ifndef RESTRICT
 #define RESTRICT __restrict
+#endif
 
 typedef bool bool_t;
 typedef float float32_t;

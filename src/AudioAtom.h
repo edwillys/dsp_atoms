@@ -35,8 +35,6 @@ template <class T>
 class CQuark
 {
 protected:
-    T *m_States = NULL;
-    T *m_Coeffs = NULL;
     CQuarkProps m_Props;
 
 public:

@@ -8,9 +8,6 @@
  */
 class CAtomBiquad : public CQuark<float32_t>
 {
-protected:
-
-
 public:
     enum eBiquadType
     {
@@ -39,19 +36,53 @@ public:
         float32_t gainDb;
     } tAtomBiquadParams;
 
-    typedef struct
+    typedef struct tAtomBiquadCoeffs
     {
         float32_t b0;
         float32_t b1;
         float32_t b2;
         float32_t a1;
         float32_t a2;
+
+        tAtomBiquadCoeffs &operator+=(const tAtomBiquadCoeffs &rhs)
+        {
+            this->a1 += rhs.a1;
+            this->a2 += rhs.a2;
+            this->b0 += rhs.b0;
+            this->b1 += rhs.b1;
+            this->b2 += rhs.b2;
+
+            return *this; // return the result by reference
+        }
+
+        friend tAtomBiquadCoeffs operator-(tAtomBiquadCoeffs lhs,
+                                           const tAtomBiquadCoeffs &rhs)
+        {
+            lhs.a1 -= rhs.a1;
+            lhs.a2 -= rhs.a2;
+            lhs.b0 -= rhs.b0;
+            lhs.b1 -= rhs.b1;
+            lhs.b2 -= rhs.b2;
+            return lhs; // return the result by value (uses move constructor)
+        }
+
+        friend tAtomBiquadCoeffs operator/(tAtomBiquadCoeffs lhs,
+                                           float32_t factor)
+        {
+            lhs.a1 /= factor;
+            lhs.a2 /= factor;
+            lhs.b0 /= factor;
+            lhs.b1 /= factor;
+            lhs.b2 /= factor;
+            return lhs; // return the result by value (uses move constructor)
+        }
     } tAtomBiquadCoeffs;
 
     typedef struct
     {
-        float32_t z_1;
-        float32_t z_2;
+        float32_t s1;
+        float32_t s2;
+        float32_t y_prev;
     } tAtomBiquadStates;
 
     /**
@@ -74,5 +105,39 @@ public:
      */
     void set(void *params, cint32_t len) override;
 
+    /**
+     * @brief Calculate the biquad ai bi coefficients
+     *
+     * @param params
+     *
+     * For all of the pre-calculated filter coefficients in the Audio EQ Cookbook
+     * (https://webaudio.github.io/Audio-EQ-Cookbook/Audio-EQ-Cookbook.txt)
+     * we apply the values directly. For the remainig ones (1-pole filters), we
+     * calculate it in a similar fashion, by using the pre warped BLT substitution:
+     *
+     *              1         1 - z^-1
+     * s  <--  ----------- * ----------
+     *           tan(w0/2)     1 + z^-1
+     *
+     *   and the identity:
+     *
+     *               sin(w0)
+     * tan(w0/2) = -------------
+     *              1 + cos(w0)
+     *
+     */
     void calculateCoeffsCookbook(const tAtomBiquadParams &params);
+
+protected:
+    void setMorphMs(const float32_t morphTimeMs);
+
+    tAtomBiquadCoeffs **m_TargetCoeffs = nullptr;
+    tAtomBiquadCoeffs **m_DeltaCoeffs = nullptr;
+    tAtomBiquadCoeffs **m_Coeffs = nullptr;
+    tAtomBiquadStates **m_TargetStates = nullptr;
+    tAtomBiquadStates **m_DeltaStates = nullptr;
+    tAtomBiquadStates **m_States = nullptr;
+    int32_t m_MorphBlocksizeCnt = 0;
+    int32_t m_MorphBlocksizeTotal = 0;
+    float32_t m_MorphBlocksizeMs = 0.F;
 };
