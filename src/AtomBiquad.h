@@ -98,11 +98,6 @@ public:
     /**
      * @brief See base class definition
      */
-    virtual void idle(void){};
-
-    /**
-     * @brief See base class definition
-     */
     void set(void *params, cint32_t len) override;
 
     /**

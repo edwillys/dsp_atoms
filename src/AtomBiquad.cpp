@@ -83,20 +83,17 @@ void CAtomBiquad::play(float32_t **const in, float32_t **const out)
                         // TDF-II
                         tAtomBiquadCoeffs *pCoeffs = &m_Coeffs[ch][el];
                         tAtomBiquadStates *pStates = &m_States[ch][el];
-                        float32_t s2 = pStates->s2;
-                        float32_t s1 = pStates->s1;
-                        float32_t y_prev = pStates->y_prev;
+                        float32_t *pS2 = &pStates->s2;
+                        float32_t *pS1 = &pStates->s1;
+                        float32_t *pYprev = &pStates->y_prev;
                         for (auto i = 0; i < m_Props.m_BlockSize; i++)
                         {
                             float32_t x = pIn[i];
-                            s2 = x * pCoeffs->b2 - pCoeffs->a2 * y_prev;
-                            s1 = s2 + x * pCoeffs->b1 - pCoeffs->a1 * y_prev;
-                            pOut[i] = s1 + pCoeffs->b0 * x;
-                            y_prev = pOut[i];
+                            *pS2 = x * pCoeffs->b2 - pCoeffs->a2 * *pYprev;
+                            *pS1 = *pS2 + x * pCoeffs->b1 - pCoeffs->a1 * *pYprev;
+                            pOut[i] = *pS1 + pCoeffs->b0 * x;
+                            *pYprev = pOut[i];
                         }
-                        pStates->s2 = s2;
-                        pStates->s1 = s1;
-                        pStates->y_prev = y_prev;
                     }
                 }
             }
