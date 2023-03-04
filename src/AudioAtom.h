@@ -73,12 +73,6 @@ public:
     /**
      * @brief
      *
-     */
-    virtual void idle(void){};
-
-    /**
-     * @brief
-     *
      * @param out
      */
     virtual void mute(T **const out)
