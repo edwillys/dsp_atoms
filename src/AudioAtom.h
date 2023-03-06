@@ -1,6 +1,11 @@
 #pragma once
 
+#include <stdio.h>
+#include <string.h>
 #include "AudioTypes.h"
+
+#define SET_ALL_CH_IND (-1)
+#define SET_ALL_EL_IND (-1)
 
 class CQuarkProps
 {
@@ -32,7 +37,7 @@ public:
  *
  */
 template <class T>
-class CQuark
+class CAudioQuark
 {
 protected:
     CQuarkProps m_Props;
@@ -42,13 +47,13 @@ public:
      * @brief Construct a new Audio Atom object
      *
      */
-    CQuark(){};
+    CAudioQuark(){};
 
     /**
      * @brief Destroy the Audio Atom object
      *
      */
-    ~CQuark(){};
+    ~CAudioQuark(){};
 
     /**
      * @brief
@@ -157,4 +162,37 @@ public:
      * @param props
      */
     void setProps(const CQuarkProps &props) { m_Props = props; };
+};
+
+template <class T>
+class CAudioQuarkLinearMorph : public CAudioQuark<T>
+{
+public:
+    void setMorphMs(const float32_t morphTimeMs)
+    {
+        m_MorphBlocksizeTotal = 0;
+        m_MorphBlocksizeMs = 0.F;
+        if (morphTimeMs > 0.F)
+        {
+            float32_t blockMs = (m_Props.m_BlockSize / (float32_t)m_Props.m_Fs);
+            int32_t numBlocks = (int32_t)(morphTimeMs / blockMs);
+
+            if (numBlocks > 0)
+            {
+                m_MorphBlocksizeTotal = numBlocks;
+                m_MorphBlocksizeMs = numBlocks * blockMs;
+            }
+        }
+
+        m_MorphBlocksizeCnt = 0;
+
+        calculateDeltas();
+    }
+
+protected:
+    virtual void calculateDeltas(void) = 0;
+
+    int32_t m_MorphBlocksizeCnt = 0;
+    int32_t m_MorphBlocksizeTotal = 0;
+    float32_t m_MorphBlocksizeMs = 0.F;
 };

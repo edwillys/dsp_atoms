@@ -39,6 +39,7 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/../src/Resampler.cpp
     ${CMAKE_SOURCE_DIR}/../src/UpFirDown.cpp
     ${CMAKE_SOURCE_DIR}/../src/AtomBiquad.cpp
+    ${CMAKE_SOURCE_DIR}/../src/AtomGain.cpp
 )
 
 # indicates the shared library variant

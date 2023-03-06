@@ -20,7 +20,7 @@ template<typename T>
 std::vector<std::vector<T> > split(std::vector<T> &v, int32_t n)
 {
     std::vector< std::vector<float32_t> > vec_split;
-    cint32_t niter = ceil(v.size() / (float32_t)n);
+    cint32_t niter = static_cast<cint32_t>(ceil(v.size() / (float32_t)n));
     v.resize(niter * n);
     for(auto i = 0; i < niter; i++)
     {

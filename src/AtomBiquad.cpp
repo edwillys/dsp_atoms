@@ -116,23 +116,33 @@ void CAtomBiquad::set(void *params, cint32_t len)
     }
 }
 
-void CAtomBiquad::setMorphMs(const float32_t morphTimeMs)
+void CAtomBiquad::calculateDeltas(void)
 {
-    m_MorphBlocksizeTotal = 0;
-    m_MorphBlocksizeMs = 0.F;
-    if (morphTimeMs > 0.F)
+    if (m_MorphBlocksizeTotal > 0)
     {
-        float32_t blockMs = (m_Props.m_BlockSize / (float32_t)m_Props.m_Fs);
-        int32_t numBlocks = (int32_t)(morphTimeMs / blockMs);
-
-        if (numBlocks > 0)
+        for (auto ch = 0; ch < m_Props.m_NumChOut; ch++)
         {
-            m_MorphBlocksizeTotal = numBlocks;
-            m_MorphBlocksizeMs = numBlocks * blockMs;
+            for (auto el = 0; el < m_Props.m_NumEl; el++)
+            {
+                tAtomBiquadCoeffs *c = &m_Coeffs[ch][el];
+                tAtomBiquadCoeffs *tc = &m_TargetCoeffs[ch][el];
+                tAtomBiquadCoeffs *dc = &m_DeltaCoeffs[ch][el];
+
+                *dc = (*tc - *c) / (float32_t)(m_MorphBlocksizeTotal * m_Props.m_BlockSize);
+            }
         }
     }
-
-    m_MorphBlocksizeCnt = 0;
+    else
+    {
+        for (auto ch = 0; ch < m_Props.m_NumChOut; ch++)
+        {
+            for (auto el = 0; el < m_Props.m_NumEl; el++)
+            {
+                m_Coeffs[ch][el] = m_TargetCoeffs[ch][el];
+                memset(&m_DeltaCoeffs[ch][el], 0, sizeof(tAtomBiquadCoeffs));
+            }
+        }
+    }
 }
 
 void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
@@ -144,7 +154,7 @@ void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
         params.type < NUM_BIQT)
     {
         // clipping values
-        float32_t gainDb = CLIP(params.gainDb, -140.F, 50.F);
+        float32_t gainDb = CLIP(params.gainDb, MUTE_DB_FS, 50.F);
         float32_t f0 = CLIP(params.freq, 0.F, m_Props.m_Fs * 0.5F);
         float32_t q = CLIP(params.q, 0.01F, 50.0F);
         // intermediate variables
@@ -312,7 +322,7 @@ void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
         tAtomBiquadCoeffs *c = &m_Coeffs[params.ch][params.el];
         if (m_MorphBlocksizeTotal > 0)
         {
-            m_DeltaCoeffs[params.ch][params.el] = (*tc - *c) / (float32_t)m_MorphBlocksizeTotal;
+            m_DeltaCoeffs[params.ch][params.el] = (*tc - *c) / (float32_t)(m_MorphBlocksizeTotal * m_Props.m_BlockSize);
         }
         else
         {

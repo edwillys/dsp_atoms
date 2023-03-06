@@ -6,7 +6,7 @@
  * @brief
  *
  */
-class CAtomBiquad : public CQuark<float32_t>
+class CAtomBiquad : public CAudioQuarkLinearMorph<float32_t>
 {
 public:
     enum eBiquadType
@@ -124,7 +124,7 @@ public:
     void calculateCoeffsCookbook(const tAtomBiquadParams &params);
 
 protected:
-    void setMorphMs(const float32_t morphTimeMs);
+    void calculateDeltas(void) override;
 
     tAtomBiquadCoeffs **m_TargetCoeffs = nullptr;
     tAtomBiquadCoeffs **m_DeltaCoeffs = nullptr;
@@ -132,7 +132,4 @@ protected:
     tAtomBiquadStates **m_TargetStates = nullptr;
     tAtomBiquadStates **m_DeltaStates = nullptr;
     tAtomBiquadStates **m_States = nullptr;
-    int32_t m_MorphBlocksizeCnt = 0;
-    int32_t m_MorphBlocksizeTotal = 0;
-    float32_t m_MorphBlocksizeMs = 0.F;
 };

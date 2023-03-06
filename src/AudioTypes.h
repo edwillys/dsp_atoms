@@ -4,6 +4,8 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
+// Defines
+
 #ifndef NULL
 #define NULL (0)
 #endif
@@ -21,6 +23,10 @@
 #ifndef RESTRICT
 #define RESTRICT __restrict
 #endif
+
+#define MUTE_DB_FS (-140.0F)
+
+// Types
 
 typedef bool bool_t;
 typedef float float32_t;
