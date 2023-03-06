@@ -1,6 +1,4 @@
-#ifndef BIQUAD_TESTS
-#define BIQUAD_TESTS
-#include <boost/test/unit_test.hpp>
+#include "gtest/gtest.h"
 #include "AtomBiquad.h"
 #include <iostream>
 #include <vector>
@@ -14,8 +12,6 @@ namespace fs = std::filesystem;
 // Defines
 //=============================================================
 
-BOOST_AUTO_TEST_SUITE(BiquadTests)
-
 //=============================================================
 // Helper functions
 //=============================================================
@@ -27,8 +23,8 @@ static void helper_test(
     std::string path_out = "",
     cfloat32_t eps = 4.E-5, bool_t verbose = false)
 {
-    BOOST_REQUIRE_EQUAL(true, path_out.size() > 0);
-    BOOST_REQUIRE_EQUAL(true, fs::exists(path_ref));
+    ASSERT_EQ(true, path_out.size() > 0);
+    ASSERT_EQ(true, fs::exists(path_ref));
 
     cint32_t size = 65536;
     cint32_t bs = 64;
@@ -104,7 +100,7 @@ static void helper_test(
 // Test cases
 //=============================================================
 
-BOOST_AUTO_TEST_CASE(BiquadBypass)
+TEST(Biquad, Bypass)
 {
     cint32_t bs = 64;
 
@@ -125,7 +121,3 @@ BOOST_AUTO_TEST_CASE(BiquadBypass)
         path_out.string(),
         path_ref.string());
 }
-
-BOOST_AUTO_TEST_SUITE_END()
-
-#endif // BIQUAD_TESTS

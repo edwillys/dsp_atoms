@@ -1,6 +1,4 @@
-#ifndef RESAMPLER_TESTS
-#define RESAMPLER_TESTS
-#include <boost/test/unit_test.hpp>
+#include "gtest/gtest.h"
 #include "Resampler.h"
 #include <iostream>
 #include <vector>
@@ -17,8 +15,6 @@ namespace fs = std::filesystem;
 // Defines
 //=============================================================
 
-BOOST_AUTO_TEST_SUITE(ResamplerTests)
-
 //=============================================================
 // Helper functions
 //=============================================================
@@ -27,7 +23,7 @@ static void helper_test(const std::string &path, cint32_t up, cint32_t down, cin
 {
     bool_t writeout = outwav.size() > 0;
 
-    BOOST_REQUIRE_EQUAL(true, fs::exists(path));
+    ASSERT_EQ(true, fs::exists(path));
 
     CSampleParams params;
     params.append = false;
@@ -52,7 +48,7 @@ static void helper_test(const std::string &path, cint32_t up, cint32_t down, cin
         write_wav(outwav, content);
     }
 
-    BOOST_REQUIRE_EQUAL(true, fs::exists(path_ref));
+    ASSERT_EQ(true, fs::exists(path_ref));
 
     SF_INFO info;
     SNDFILE* const sndfile = sf_open(path_ref.c_str(), SFM_READ, &info);
@@ -81,7 +77,7 @@ static void helper_test(const std::string &path, cint32_t up, cint32_t down, cin
             {
                 if (verbose)
                     std::cout << "testing index=" << ref_ind + j << " " << buf_ref[j] << " ?= " << buf[j] << std::endl;
-                BOOST_REQUIRE_LE(abs(buf_ref[j] - buf[j]), eps);
+                ASSERT_LE(abs(buf_ref[j] - buf[j]), eps);
             }
             ref_ind += bs;
         }
@@ -94,7 +90,7 @@ static void helper_test(const std::string &path, cint32_t up, cint32_t down, cin
 // Test cases
 //=============================================================
 
-BOOST_AUTO_TEST_CASE(ResamplerUnisson)
+TEST(Resampler,Unisson)
 {
     cint32_t bs = 64;
 
@@ -108,7 +104,7 @@ BOOST_AUTO_TEST_CASE(ResamplerUnisson)
         path.string());
 }
 
-BOOST_AUTO_TEST_CASE(ResamplerFifthsBlocksize96)
+TEST(Resampler,FifthsBlocksize96)
 {
     cint32_t bs = 96;
     auto path = fs::path(__FILE__).parent_path() / fs::path("in/A4v16.wav");
@@ -130,7 +126,7 @@ BOOST_AUTO_TEST_CASE(ResamplerFifthsBlocksize96)
         ref_path_5thdown.string());
 }
 
-BOOST_AUTO_TEST_CASE(ResamplerFourthsBlocksize96)
+TEST(Resampler,FourthsBlocksize96)
 {
     cint32_t bs = 96;
     auto path = fs::path(__FILE__).parent_path() / fs::path("in/A4v16.wav");
@@ -152,7 +148,7 @@ BOOST_AUTO_TEST_CASE(ResamplerFourthsBlocksize96)
         ref_path_4thdown.string());
 }
 
-BOOST_AUTO_TEST_CASE(ResamplerFourthsBlocksize64)
+TEST(Resampler,FourthsBlocksize64)
 {
     cint32_t bs = 64;
     auto path = fs::path(__FILE__).parent_path() / fs::path("in/A4v16.wav");
@@ -174,7 +170,7 @@ BOOST_AUTO_TEST_CASE(ResamplerFourthsBlocksize64)
         ref_path_4thdown.string());
 }
 
-BOOST_AUTO_TEST_CASE(ResamplerFifthsBlocksize64)
+TEST(Resampler,FifthsBlocksize64)
 {
     cint32_t bs = 64;
     auto path = fs::path(__FILE__).parent_path() / fs::path("in/A4v16.wav");
@@ -196,6 +192,3 @@ BOOST_AUTO_TEST_CASE(ResamplerFifthsBlocksize64)
         ref_path_5thdown.string());
 }
 
-BOOST_AUTO_TEST_SUITE_END()
-
-#endif // RESAMPLER_TESTS

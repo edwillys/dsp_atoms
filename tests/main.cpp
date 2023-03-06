@@ -1,2 +1,8 @@
-#define BOOST_TEST_MODULE AudioFileTests
-#include <boost/test/unit_test.hpp>
+#include "gtest/gtest.h"
+
+int main(int argc, char **argv) 
+{
+    ::testing::InitGoogleTest(&argc, argv); 
+    //::testing::GTEST_FLAG(filter) = "*UpFir*";
+    return RUN_ALL_TESTS();
+}

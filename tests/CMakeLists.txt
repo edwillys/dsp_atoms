@@ -13,13 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 #set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-#enable dynamic linking
-if (!WIN32)
-    set(Boost_USE_STATIC_LIBS OFF) 
-endif()
-
 # search for unit_test_framework
-find_package(Boost REQUIRED COMPONENTS unit_test_framework)
+find_package(GTest CONFIG REQUIRED)
 find_package(SndFile CONFIG REQUIRED)
 
 include_directories(
@@ -43,9 +38,6 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/../src/AtomGain.cpp
 )
 
-# indicates the shared library variant
-target_compile_definitions(testapp PRIVATE "BOOST_TEST_DYN_LINK=1")
-
 # Only needed if __builtin_assume_aligned is used
 #SET( MY_GCC_FLAGS "-fpermissive")
 #SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MY_GCC_FLAGS}")
@@ -53,6 +45,9 @@ target_compile_definitions(testapp PRIVATE "BOOST_TEST_DYN_LINK=1")
 # link Boost libraries to the new target
 target_link_libraries(testapp 
     PRIVATE
-    ${Boost_LIBRARIES}
+    GTest::gtest 
+    GTest::gtest_main 
+    GTest::gmock 
+    GTest::gmock_main
     SndFile::sndfile
 )

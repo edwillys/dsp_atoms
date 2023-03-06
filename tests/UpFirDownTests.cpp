@@ -1,6 +1,4 @@
-#ifndef UPFIRDOWN_TESTS
-#define UPFIRDOWN_TESTS
-#include <boost/test/unit_test.hpp>
+#include "gtest/gtest.h"
 #include "UpFirDown.h"
 #include <iostream>
 #include <vector>
@@ -31,8 +29,6 @@ namespace Square{
 //=============================================================
 // Defines
 //=============================================================
-BOOST_AUTO_TEST_SUITE (UpFirDownTests)
-
 static void helper_test(cint32_t us, cint32_t ds, 
     const std::vector< std::vector<float32_t> >& in, 
     const std::vector<float32_t>& fir, const std::vector<float32_t>& ref,
@@ -69,7 +65,7 @@ static void helper_test(cint32_t us, cint32_t ds,
     float32_t *out;
 
     // check if input array is not empty
-    BOOST_REQUIRE_GT(in.size(), 0);
+    ASSERT_GT(in.size(), 0);
     
     int32_t out_len;
     if ( 0 == blocksize )
@@ -87,7 +83,7 @@ static void helper_test(cint32_t us, cint32_t ds,
         for( auto i = 0; i < ind_end; i++){
             if (verbose)
                 std::cout << "testing index=" << offset+i << std::endl;
-            BOOST_REQUIRE_LE( abs(out[i] - ref[offset + i]), eps );
+            ASSERT_LE( abs(out[i] - ref[offset + i]), eps );
         }
         offset += ind_end;
     }
@@ -196,7 +192,7 @@ std::vector<float32_t> gen_square(cint32_t len, cfloat32_t freq, cfloat32_t fs,
  * @brief Test case: Bypass FIR, all at once
  * 
  */
-BOOST_AUTO_TEST_CASE (UpFirDown_SimpleFir)
+TEST(UpFirDown,SimpleFir)
 {
     helper_test( 1, 1,
         {
@@ -235,7 +231,7 @@ BOOST_AUTO_TEST_CASE (UpFirDown_SimpleFir)
  * @brief Test case: Bypass FIR with blocksize 64
  * 
  */
-BOOST_AUTO_TEST_CASE (UpFirDown_SimpleFirBlocksize64)
+TEST (UpFirDown,SimpleFirBlocksize64)
 {
     cint32_t blocksize = 64;
     cint32_t nsamples = 750;
@@ -255,7 +251,7 @@ BOOST_AUTO_TEST_CASE (UpFirDown_SimpleFirBlocksize64)
  * @brief Test case: Bypass FIR with blocksize 96
  * 
  */
-BOOST_AUTO_TEST_CASE (UpFirDown_SimpleFirBlocksize96)
+TEST (UpFirDown, SimpleFirBlocksize96)
 {
     cint32_t blocksize = 96;
     cint32_t nsamples = 750;
@@ -275,7 +271,7 @@ BOOST_AUTO_TEST_CASE (UpFirDown_SimpleFirBlocksize96)
  * @brief Test case: Simple upsampling, all at once
  * 
  */
-BOOST_AUTO_TEST_CASE (UpFirDown_Upsample)
+TEST (UpFirDown, Upsample)
 {
     // upsampling with zeros insertion
     helper_test( 3, 1,
@@ -318,7 +314,7 @@ BOOST_AUTO_TEST_CASE (UpFirDown_Upsample)
  * @brief Test case: Simple downsampling, all at once
  * 
  */
-BOOST_AUTO_TEST_CASE (UpFirDown_Downsample)
+TEST (UpFirDown,Downsample)
 {
     // decimation by 3
     helper_test( 1, 3,
@@ -343,7 +339,7 @@ BOOST_AUTO_TEST_CASE (UpFirDown_Downsample)
  * @brief Test case: Complete case of upsampling/downsampling, all at once
  * 
  */
-BOOST_AUTO_TEST_CASE (UpFirDown_UpAndDownsample)
+TEST (UpFirDown,UpAndDownsample)
 {
     // linear interp, rate 2/3
     helper_test( 2, 3,
@@ -396,7 +392,7 @@ BOOST_AUTO_TEST_CASE (UpFirDown_UpAndDownsample)
  * @brief Test case: Complete case of upsampling/downsampling, split in 96 sample blocks
  * 
  */
-BOOST_AUTO_TEST_CASE (UpFirDown_UpAndDownsampleBlocksize96)
+TEST (UpFirDown,UpAndDownsampleBlocksize96)
 {
     std::vector<float32_t> fir, ref;
 
@@ -418,7 +414,7 @@ BOOST_AUTO_TEST_CASE (UpFirDown_UpAndDownsampleBlocksize96)
  * @brief Test case: Complete case of upsampling/downsampling, split in 64 sample blocks
  * 
  */
-BOOST_AUTO_TEST_CASE (UpFirDown_UpAndDownsampleBlocksize64)
+TEST (UpFirDown,UpAndDownsampleBlocksize64)
 {
     std::vector<float32_t> fir, ref;
 
@@ -436,6 +432,3 @@ BOOST_AUTO_TEST_CASE (UpFirDown_UpAndDownsampleBlocksize64)
     helper_test_square( 2, 3, fir, ref, 64);
 }
 
-BOOST_AUTO_TEST_SUITE_END()
-
-#endif //UPFIRDOWN_TESTS
