@@ -18,16 +18,23 @@ public:
     int32_t m_NumCtrlOut;
     int32_t m_NumEl;
 
-    CQuarkProps(void)
-    {
-        m_Fs = 48000;
-        m_BlockSize = 64;
-        m_NumChIn = 0;
-        m_NumChOut = 0;
-        m_NumCtrlIn = 0;
-        m_NumCtrlOut = 0;
-        m_NumEl = 0;
-    }
+    CQuarkProps(
+        int32_t fs = 48000,
+        int32_t blockSize = 64,
+        int32_t numChIn = 0,
+        int32_t numChOut = 0,
+        int32_t numCtrlIn = 0,
+        int32_t numCtrlOut = 0,
+        int32_t numEl = 0
+    ) : 
+        m_Fs(fs),
+        m_BlockSize(blockSize),
+        m_NumChIn(numChIn),
+        m_NumChOut(numChOut),
+        m_NumCtrlIn(numCtrlIn),
+        m_NumCtrlOut(numCtrlOut),
+        m_NumEl(numEl)
+    {}
 
     ~CQuarkProps() {}
 };
