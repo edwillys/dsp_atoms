@@ -82,7 +82,6 @@ public:
     {
         float32_t s1;
         float32_t s2;
-        float32_t y_prev;
     } tAtomBiquadStates;
 
     /**
