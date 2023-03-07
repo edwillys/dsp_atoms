@@ -19,18 +19,19 @@ static void helper_test(
     const std::vector<CAtomBiquad::tAtomBiquadParams> &params,
     cint32_t nch,
     cint32_t nel,
+    std::string path_out,
     const std::string &path_ref,
-    std::string path_out = "",
-    cfloat32_t eps = 4.E-5, bool_t verbose = false)
+    cfloat32_t eps = 4.E-5,
+    bool_t verbose = false)
 {
     ASSERT_EQ(true, path_out.size() > 0);
-    ASSERT_EQ(true, fs::exists(path_ref));
 
     cint32_t size = 65536;
     cint32_t bs = 64;
     cint32_t fs = 48000;
     cint32_t niter = size / bs;
     std::ofstream ofs(path_out);
+    ofs << std::fixed << std::setprecision(8);
 
     CQuarkProps props{
         fs,
@@ -39,8 +40,7 @@ static void helper_test(
         nch,
         0,
         0,
-        nel
-    };
+        nel};
     CAtomBiquad biquad;
     biquad.init(props);
 
@@ -53,8 +53,8 @@ static void helper_test(
     float32_t **out = new float *[nch];
     for (auto ch = 0; ch < nch; ch++)
     {
-        in[ch] = new float32_t[nel]();
-        out[ch] = new float32_t[nel]();
+        in[ch] = new float32_t[bs]();
+        out[ch] = new float32_t[bs]();
     }
 
     for (auto ch = 0; ch < nch; ch++)
@@ -84,6 +84,8 @@ static void helper_test(
             }
         }
     }
+
+    ASSERT_EQ(true, fs::exists(path_ref));
 
     for (auto ch = 0; ch < nch; ch++)
     {
@@ -115,6 +117,28 @@ TEST(Biquad, Bypass)
             1000.0F,                               // freq
             0.707F,                                // q
             0.0                                    // gainDb
+        }},
+        1,
+        1,
+        path_out.string(),
+        path_ref.string());
+}
+
+TEST(Biquad, LPF_500Hz_0707q_0dB)
+{
+    cint32_t bs = 64;
+
+    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_lpf_500Hz_0707q_0dB_ir.txt");
+    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_lpf_500Hz_0707q_0dB_ir.txt");
+
+    helper_test(
+        {{
+            0,                                  // ch;
+            0,                                  // el;
+            CAtomBiquad::eBiquadType::BIQT_LPF, // type
+            500.0F,                             // freq
+            0.707F,                             // q
+            0.0                                 // gainDb
         }},
         1,
         1,
