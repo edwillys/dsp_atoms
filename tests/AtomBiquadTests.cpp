@@ -59,7 +59,7 @@ static void helper_test(
 
     for (auto ch = 0; ch < nch; ch++)
     {
-        in[ch][0] = 1.0F; // dirac
+        in[ch][0] = static_cast<float32_t>(size) / 2.0F; // dirac
         biquad.play(in, out);
         for (auto sample = 0; sample < bs; sample++)
         {
@@ -106,8 +106,8 @@ TEST(Biquad, Bypass)
 {
     cint32_t bs = 64;
 
-    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_bypass_ir.txt");
-    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_bypass_ir.txt");
+    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_Bypass_IR.txt");
+    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_Bypass_IR.txt");
 
     helper_test(
         {{
@@ -128,8 +128,8 @@ TEST(Biquad, LPF_500Hz_0707q_0dB)
 {
     cint32_t bs = 64;
 
-    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_lpf_500Hz_0707q_0dB_ir.txt");
-    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_lpf_500Hz_0707q_0dB_ir.txt");
+    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_LPF_500Hz_0707q_0dB_IR.txt");
+    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_LPF_500Hz_0707q_0dB_IR.txt");
 
     helper_test(
         {{
@@ -142,6 +142,58 @@ TEST(Biquad, LPF_500Hz_0707q_0dB)
         }},
         1,
         1,
+        path_out.string(),
+        path_ref.string());
+}
+
+TEST(Biquad, HPF_500Hz_0707q_0dB)
+{
+    cint32_t bs = 64;
+
+    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_HPF_500Hz_0707q_0dB_IR.txt");
+    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_HPF_500Hz_0707q_0dB_IR.txt");
+
+    helper_test(
+        {{
+            0,                                  // ch;
+            0,                                  // el;
+            CAtomBiquad::eBiquadType::BIQT_HPF, // type
+            500.0F,                             // freq
+            0.707F,                             // q
+            0.0                                 // gainDb
+        }},
+        1,
+        1,
+        path_out.string(),
+        path_ref.string());
+}
+
+TEST(Biquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB)
+{
+    cint32_t bs = 64;
+
+    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB.txt");
+    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB.txt");
+
+    helper_test(
+        {{
+             0,                                  // ch;
+             0,                                  // el;
+             CAtomBiquad::eBiquadType::BIQT_LPF, // type
+             8000.0F,                            // freq
+             1.500F,                             // q
+             3.0                                 // gainDb
+         },
+         {
+             0,                                  // ch;
+             1,                                  // el;
+             CAtomBiquad::eBiquadType::BIQT_HPF, // type
+             300.0F,                             // freq
+             5.000F,                             // q
+             -10.0                               // gainDb
+         }},
+        1,
+        2,
         path_out.string(),
         path_ref.string());
 }
