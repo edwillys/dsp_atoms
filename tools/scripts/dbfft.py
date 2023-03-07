@@ -20,7 +20,7 @@ def dbfft(x, fs, win=None):
     N = len(x)  # Length of input sequence
 
     if win is None:
-        win = np.ones(x.shape)
+        win = np.ones(len(x))
     if len(x) != len(win):
         raise ValueError('Signal and window must be of the same length')
     x = x * win
