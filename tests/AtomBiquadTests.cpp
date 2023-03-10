@@ -19,12 +19,15 @@ static void helper_test(
     const std::vector<CAtomBiquad::tAtomBiquadParams> &params,
     cint32_t nch,
     cint32_t nel,
-    std::string path_out,
-    const std::string &path_ref,
+    const testing::TestInfo *test_info,
     cfloat32_t eps = 4.E-5,
     bool_t verbose = false)
 {
-    ASSERT_EQ(true, path_out.size() > 0);
+    auto base_dir = fs::absolute(__FILE__).parent_path();
+    auto fpath_base = std::string(test_info->test_suite_name()) + "_" +
+                      std::string(test_info->name()) + ".txt";
+    auto path_out = base_dir / "out" / fpath_base;
+    auto path_ref = base_dir / "ref" / fpath_base;
 
     cint32_t size = 65536;
     cint32_t bs = 64;
@@ -59,7 +62,30 @@ static void helper_test(
 
     for (auto ch = 0; ch < nch; ch++)
     {
-        in[ch][0] = static_cast<float32_t>(size) / 2.0F; // dirac
+        // dirac
+        in[ch][0] = static_cast<float32_t>(size) / 2.0F;
+        for (auto i = 1; i < nel; i++)
+            in[ch][i] = 0.0F;
+    }
+    biquad.play(in, out);
+    for (auto sample = 0; sample < bs; sample++)
+    {
+        for (auto ch = 0; ch < nch; ch++)
+        {
+            ofs << out[ch][sample] << ",";
+        }
+        ofs << std::endl;
+    }
+
+    for (auto ch = 0; ch < nch; ch++)
+    {
+        // all zeros
+        for (auto i = 0; i < nel; i++)
+            in[ch][i] = 0.0F;
+    }
+
+    for (auto i = 1; i < niter; i++)
+    {
         biquad.play(in, out);
         for (auto sample = 0; sample < bs; sample++)
         {
@@ -69,23 +95,7 @@ static void helper_test(
             }
             ofs << std::endl;
         }
-
-        in[ch][0] = 0.0F;
-        for (auto i = 0; i < niter - 1; i++)
-        {
-            biquad.play(in, out);
-            for (auto sample = 0; sample < bs; sample++)
-            {
-                for (auto ch = 0; ch < nch; ch++)
-                {
-                    ofs << out[ch][sample] << ",";
-                }
-                ofs << std::endl;
-            }
-        }
     }
-
-    ASSERT_EQ(true, fs::exists(path_ref));
 
     for (auto ch = 0; ch < nch; ch++)
     {
@@ -95,20 +105,15 @@ static void helper_test(
     delete in;
     delete out;
 
-    // BOOST_REQUIRE_LE(abs(buf_ref[j] - buf[j]), eps);
+    ASSERT_EQ(true, compare_csv(path_out.string(), path_ref.string()));
 }
 
 //=============================================================
 // Test cases
 //=============================================================
 
-TEST(Biquad, Bypass)
+TEST(AtomBiquad, Bypass_IR)
 {
-    cint32_t bs = 64;
-
-    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_Bypass_IR.txt");
-    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_Bypass_IR.txt");
-
     helper_test(
         {{
             0,                                     // ch;
@@ -120,17 +125,11 @@ TEST(Biquad, Bypass)
         }},
         1,
         1,
-        path_out.string(),
-        path_ref.string());
+        ::testing::UnitTest::GetInstance()->current_test_info());
 }
 
-TEST(Biquad, LPF_500Hz_0707q_0dB)
+TEST(AtomBiquad, LPF_500Hz_0707q_0dB_IR)
 {
-    cint32_t bs = 64;
-
-    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_LPF_500Hz_0707q_0dB_IR.txt");
-    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_LPF_500Hz_0707q_0dB_IR.txt");
-
     helper_test(
         {{
             0,                                  // ch;
@@ -142,17 +141,11 @@ TEST(Biquad, LPF_500Hz_0707q_0dB)
         }},
         1,
         1,
-        path_out.string(),
-        path_ref.string());
+        ::testing::UnitTest::GetInstance()->current_test_info());
 }
 
-TEST(Biquad, HPF_500Hz_0707q_0dB)
+TEST(AtomBiquad, HPF_500Hz_0707q_0dB_IR)
 {
-    cint32_t bs = 64;
-
-    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_HPF_500Hz_0707q_0dB_IR.txt");
-    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_HPF_500Hz_0707q_0dB_IR.txt");
-
     helper_test(
         {{
             0,                                  // ch;
@@ -164,17 +157,11 @@ TEST(Biquad, HPF_500Hz_0707q_0dB)
         }},
         1,
         1,
-        path_out.string(),
-        path_ref.string());
+        ::testing::UnitTest::GetInstance()->current_test_info());
 }
 
-TEST(Biquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB)
+TEST(AtomBiquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB_IR)
 {
-    cint32_t bs = 64;
-
-    auto path_out = fs::path(__FILE__).parent_path() / fs::path("out/biquad_LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB.txt");
-    auto path_ref = fs::path(__FILE__).parent_path() / fs::path("ref/biquad_LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB.txt");
-
     helper_test(
         {{
              0,                                  // ch;
@@ -194,6 +181,5 @@ TEST(Biquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB)
          }},
         1,
         2,
-        path_out.string(),
-        path_ref.string());
+        ::testing::UnitTest::GetInstance()->current_test_info());
 }
