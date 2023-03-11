@@ -144,6 +144,22 @@ TEST(AtomBiquad, LPF_500Hz_0707q_0dB_IR)
         ::testing::UnitTest::GetInstance()->current_test_info());
 }
 
+TEST(AtomBiquad, LPF6DB_500Hz_0707q_0dB_IR)
+{
+    helper_test(
+        {{
+            0,                                      // ch;
+            0,                                      // el;
+            CAtomBiquad::eBiquadType::BIQT_LPF_6DB, // type
+            500.0F,                                 // freq
+            0.707F,                                 // q
+            0.0                                     // gainDb
+        }},
+        1,
+        1,
+        ::testing::UnitTest::GetInstance()->current_test_info());
+}
+
 TEST(AtomBiquad, HPF_500Hz_0707q_0dB_IR)
 {
     helper_test(
@@ -157,6 +173,118 @@ TEST(AtomBiquad, HPF_500Hz_0707q_0dB_IR)
         }},
         1,
         1,
+        ::testing::UnitTest::GetInstance()->current_test_info());
+}
+
+TEST(AtomBiquad, HPF6DB_500Hz_0707q_0dB_IR)
+{
+    helper_test(
+        {{
+            0,                                      // ch;
+            0,                                      // el;
+            CAtomBiquad::eBiquadType::BIQT_HPF_6DB, // type
+            500.0F,                                 // freq
+            0.707F,                                 // q
+            0.0                                     // gainDb
+        }},
+        1,
+        1,
+        ::testing::UnitTest::GetInstance()->current_test_info());
+}
+
+TEST(AtomBiquad, PEAK_100Hz_5000q_10dB_8kHz_10000q_m10dB_IR)
+{
+    helper_test(
+        {{
+             0,                                   // ch;
+             0,                                   // el;
+             CAtomBiquad::eBiquadType::BIQT_PEAK, // type
+             100.0F,                              // freq
+             5.000F,                              // q
+             10.0                                 // gainDb
+         },
+         {
+             0,                                   // ch;
+             1,                                   // el;
+             CAtomBiquad::eBiquadType::BIQT_PEAK, // type
+             8000.0F,                             // freq
+             10.000F,                             // q
+             -10.0                                // gainDb
+         }},
+        1,
+        2,
+        ::testing::UnitTest::GetInstance()->current_test_info());
+}
+
+TEST(AtomBiquad, NOTCH_100Hz_1000q_10dB_8kHz_10000q_m10dB_IR)
+{
+    helper_test(
+        {{
+             0,                                    // ch;
+             0,                                    // el;
+             CAtomBiquad::eBiquadType::BIQT_NOTCH, // type
+             100.0F,                               // freq
+             1.000F,                               // q
+             10.0                                  // gainDb
+         },
+         {
+             0,                                    // ch;
+             1,                                    // el;
+             CAtomBiquad::eBiquadType::BIQT_NOTCH, // type
+             8000.0F,                              // freq
+             10.000F,                              // q
+             -10.0                                 // gainDb
+         }},
+        1,
+        2,
+        ::testing::UnitTest::GetInstance()->current_test_info());
+}
+
+TEST(AtomBiquad, LSH_8kHz_1500q_3dB_HSH_300Hz_5000q_m10dB_IR)
+{
+    helper_test(
+        {{
+             0,                                  // ch;
+             0,                                  // el;
+             CAtomBiquad::eBiquadType::BIQT_LSH, // type
+             8000.0F,                            // freq
+             1.500F,                             // q
+             3.0                                 // gainDb
+         },
+         {
+             0,                                  // ch;
+             1,                                  // el;
+             CAtomBiquad::eBiquadType::BIQT_HSH, // type
+             300.0F,                             // freq
+             5.000F,                             // q
+             -10.0                               // gainDb
+         }},
+        1,
+        2,
+        ::testing::UnitTest::GetInstance()->current_test_info());
+}
+
+TEST(AtomBiquad, HSH_8kHz_0707q_3dB_LSH_300Hz_0707q_m10dB_IR)
+{
+    helper_test(
+        {{
+             0,                                  // ch;
+             0,                                  // el;
+             CAtomBiquad::eBiquadType::BIQT_HSH, // type
+             8000.0F,                            // freq
+             0.707F,                             // q
+             3.0                                 // gainDb
+         },
+         {
+             0,                                  // ch;
+             1,                                  // el;
+             CAtomBiquad::eBiquadType::BIQT_LSH, // type
+             300.0F,                             // freq
+             0.707F,                             // q
+             -10.0                               // gainDb
+         }},
+        1,
+        2,
         ::testing::UnitTest::GetInstance()->current_test_info());
 }
 
@@ -183,3 +311,37 @@ TEST(AtomBiquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB_IR)
         2,
         ::testing::UnitTest::GetInstance()->current_test_info());
 }
+
+TEST(AtomBiquad, APF_500Hz_0707q_0dB_IR)
+{
+    helper_test(
+        {{
+            0,                                  // ch;
+            0,                                  // el;
+            CAtomBiquad::eBiquadType::BIQT_APF, // type
+            500.0F,                             // freq
+            0.707F,                             // q
+            0.0                                 // gainDb
+        }},
+        1,
+        1,
+        ::testing::UnitTest::GetInstance()->current_test_info());
+}
+
+#if 0
+TEST(AtomBiquad, APF180_500Hz_0707q_0dB_IR)
+{
+    helper_test(
+        {{
+            0,                                      // ch;
+            0,                                      // el;
+            CAtomBiquad::eBiquadType::BIQT_APF_180, // type
+            500.0F,                                 // freq
+            0.707F,                                 // q
+            0.0                                     // gainDb
+        }},
+        1,
+        1,
+        ::testing::UnitTest::GetInstance()->current_test_info());
+}
+#endif

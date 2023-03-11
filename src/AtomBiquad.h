@@ -22,7 +22,7 @@ public:
         BIQT_HSH,
         BIQT_LSH,
         BIQT_APF_180,
-        BIQT_APF_360,
+        BIQT_APF,
         NUM_BIQT,
     };
 

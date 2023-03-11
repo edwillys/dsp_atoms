@@ -150,18 +150,9 @@ void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
         float32_t f0 = CLIP(params.freq, 0.F, m_Props.m_Fs * 0.5F);
         float32_t q = CLIP(params.q, 0.01F, 50.0F);
         // intermediate variables
-        float32_t A;
+        float32_t A = sqrtf(powf(10.F, (gainDb * 0.05F)));
         float32_t a0;
         tAtomBiquadCoeffs *tc = &m_TargetCoeffs[params.ch][params.el];
-
-        if (params.type == BIQT_HSH || params.type == BIQT_LSH || params.type == BIQT_PEAK)
-        {
-            A = sqrtf(powf(10.F, (gainDb * 0.025F)));
-        }
-        else
-        {
-            A = sqrtf(powf(10.F, (gainDb * 0.05F)));
-        }
 
         float32_t w0 = 2.F * (float32_t)M_PI * f0 / m_Props.m_Fs;
         float32_t cosw0 = cosf(w0);
@@ -170,16 +161,6 @@ void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
 
         switch (params.type)
         {
-        case BIQT_BYPASS:
-        {
-            a0 = 1.0F;
-            tc->a1 = 0.0F;
-            tc->a2 = 0.0F;
-            tc->b0 = 1.0F;
-            tc->b1 = 0.0F;
-            tc->b2 = 0.0F;
-        }
-        break;
         case BIQT_LPF_6DB:
         {
             // H(s) = 1 / (s + 1)
@@ -207,7 +188,7 @@ void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
             // H(s) = s / (s + 1)
             float32_t K = (1.F + cosw0) / sinw0; // 1 / tan(w0/2)
             a0 = K + 1.F;
-            tc->a1 = -(K + 1.F);
+            tc->a1 = 1.F - K;
             tc->b0 = K;
             tc->b1 = -K;
             tc->b2 = 0.0F;
@@ -279,6 +260,7 @@ void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
             tc->a2 = Ap1 + Am1 * cosw0 - 2.F * sqrtA * alpha;
         }
         break;
+#if 0 //  TODO: below is not stable
         case BIQT_APF_180:
         {
             // H(s) = (s - 1) / (s + 1)
@@ -291,7 +273,8 @@ void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
             tc->b2 = 0.0F;
         }
         break;
-        case BIQT_APF_360:
+#endif
+        case BIQT_APF:
         {
             tc->b0 = 1.F - alpha;
             tc->b1 = -2.F * cosw0;
@@ -301,8 +284,18 @@ void CAtomBiquad::calculateCoeffsCookbook(const tAtomBiquadParams &params)
             tc->a2 = 1.F - alpha;
         }
         break;
+
+        case BIQT_BYPASS:
         default:
-            break;
+        {
+            a0 = 1.0F;
+            tc->a1 = 0.0F;
+            tc->a2 = 0.0F;
+            tc->b0 = 1.0F;
+            tc->b1 = 0.0F;
+            tc->b2 = 0.0F;
+        }
+        break;
         }
 
         tc->b0 /= a0;
