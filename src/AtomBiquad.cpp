@@ -11,14 +11,17 @@ int32_t CAtomBiquad::init(const CQuarkProps &props)
     m_DeltaCoeffs = new tAtomBiquadCoeffs *[props.m_NumChOut];
     m_Coeffs = new tAtomBiquadCoeffs *[props.m_NumChOut];
 
-    for (auto i = 0; i < props.m_NumChOut; i++)
+    for (auto ch = 0; ch < props.m_NumChOut; ch++)
     {
-        m_TargetStates[i] = new tAtomBiquadStates[props.m_NumEl]();
-        m_DeltaStates[i] = new tAtomBiquadStates[props.m_NumEl]();
-        m_States[i] = new tAtomBiquadStates[props.m_NumEl]();
-        m_TargetCoeffs[i] = new tAtomBiquadCoeffs[props.m_NumEl]();
-        m_DeltaCoeffs[i] = new tAtomBiquadCoeffs[props.m_NumEl]();
-        m_Coeffs[i] = new tAtomBiquadCoeffs[props.m_NumEl]();
+        m_TargetStates[ch] = new tAtomBiquadStates[props.m_NumEl]();
+        m_DeltaStates[ch] = new tAtomBiquadStates[props.m_NumEl]();
+        m_States[ch] = new tAtomBiquadStates[props.m_NumEl]();
+        m_TargetCoeffs[ch] = new tAtomBiquadCoeffs[props.m_NumEl]();
+        m_DeltaCoeffs[ch] = new tAtomBiquadCoeffs[props.m_NumEl]();
+        m_Coeffs[ch] = new tAtomBiquadCoeffs[props.m_NumEl]();
+        for(auto el = 0; el < props.m_NumEl; el++)
+            m_Coeffs[ch][el].b1 = 1.0F; // init state = bypass
+        
     }
 
     return 0;
@@ -43,6 +46,7 @@ void CAtomBiquad::play(float32_t **const in, float32_t **const out)
                     float32_t *pS1 = &pStates->s1;
                     for (auto i = 0; i < m_Props.m_BlockSize; i++)
                     {
+                        *pCoeffs += *pCoeffsDelta;
                         // TDF-II
                         float32_t x = pIn[i];
                         float32_t y = *pS1 + pCoeffs->b0 * x;
@@ -50,8 +54,7 @@ void CAtomBiquad::play(float32_t **const in, float32_t **const out)
                         *pS1 = *pS2 + x * pCoeffs->b1 - pCoeffs->a1 * y;
                         *pS2 = x * pCoeffs->b2 - pCoeffs->a2 * y;
                     }
-                    pStates->s2 = *pS2;
-                    pStates->s1 = *pS1;
+                    pIn = pOut;
                 }
             }
             if (--m_MorphBlocksizeCnt <= 0)
@@ -61,6 +64,7 @@ void CAtomBiquad::play(float32_t **const in, float32_t **const out)
                     for (auto el = 0; el < m_Props.m_NumEl; el++)
                     {
                         m_Coeffs[ch][el] = m_TargetCoeffs[ch][el];
+                        m_DeltaCoeffs[ch][el] = {0};
                     }
                 }
             }
@@ -105,6 +109,8 @@ void CAtomBiquad::set(void *params, cint32_t len)
             calculateCoeffsCookbook(*p_biq_params);
             p_biq_params++;
         }
+
+        startMorph();
     }
 }
 

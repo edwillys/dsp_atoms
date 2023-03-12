@@ -181,7 +181,7 @@ public:
         m_MorphBlocksizeMs = 0.F;
         if (morphTimeMs > 0.F)
         {
-            float32_t blockMs = (m_Props.m_BlockSize / (float32_t)m_Props.m_Fs);
+            float32_t blockMs = 1000.F * (m_Props.m_BlockSize / (float32_t)m_Props.m_Fs);
             int32_t numBlocks = (int32_t)(morphTimeMs / blockMs);
 
             if (numBlocks > 0)
@@ -194,6 +194,11 @@ public:
         m_MorphBlocksizeCnt = 0;
 
         calculateDeltas();
+    }
+
+    void startMorph(void)
+    {
+        m_MorphBlocksizeCnt = m_MorphBlocksizeTotal;
     }
 
 protected:

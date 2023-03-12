@@ -50,6 +50,32 @@ void write_wav(const std::string &outwav, const std::vector<float32_t> &content,
     }
 }
 
+std::vector<float32_t> read_wav(const std::string &path_wav, cint32_t ch)
+{
+    // write that same content to another file
+    SF_INFO info;
+    SNDFILE *const sndfile = sf_open(path_wav.c_str(), SFM_READ, &info);
+    std::vector<float32_t> wav;
+
+    if (sndfile == NULL)
+    {
+        std::cout << "Something went wrong in out open" << std::endl;
+    }
+    else
+    {
+        if (ch < info.channels)
+        {
+            wav.resize(info.frames);
+            // Read data
+            sf_seek(sndfile, ch * info.frames, SEEK_SET);
+            sf_read_float(sndfile, &wav[0], info.frames);
+            sf_close(sndfile);
+        }
+    }
+
+    return wav;
+}
+
 bool compare_wav(const std::string &wavL, const std::string &wavR, float32_t eps)
 {
     SF_INFO info[2];
@@ -59,7 +85,12 @@ bool compare_wav(const std::string &wavL, const std::string &wavR, float32_t eps
     };
 
     bool retval = true;
-    if (!sndfile[0] || !!sndfile[1] || sndfile[0] != sndfile[1])
+    if (
+        !sndfile[0] ||
+        !sndfile[1] ||
+        info[0].channels != info[1].channels ||
+        info[0].samplerate != info[1].samplerate ||
+        info[0].frames != info[1].frames)
     {
         std::cerr << "WAV files have different info " << std::endl;
         sf_close(sndfile[0]);
@@ -118,11 +149,11 @@ bool compare_csv(const std::string &left, const std::string &right, float32_t ep
             }
             else
             {
-                for(auto i = 0; i < line_split_left.size(); i++)
+                for (auto i = 0; i < line_split_left.size(); i++)
                 {
                     auto float_left = std::atof(line_split_left[i].c_str());
                     auto float_right = std::atof(line_split_right[i].c_str());
-                    if(fabsf(float_left - float_right) > eps)
+                    if (fabsf(float_left - float_right) > eps)
                     {
                         retval = false;
                         break;

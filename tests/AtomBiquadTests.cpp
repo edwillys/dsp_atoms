@@ -9,112 +9,139 @@
 namespace fs = std::filesystem;
 
 //=============================================================
-// Defines
-//=============================================================
-
-//=============================================================
 // Helper functions
 //=============================================================
-static void helper_test(
-    const std::vector<CAtomBiquad::tAtomBiquadParams> &params,
-    cint32_t nch,
-    cint32_t nel,
-    const testing::TestInfo *test_info,
-    cfloat32_t eps = 4.E-5,
-    bool_t verbose = false)
+
+class AtomBiquad : public ::testing::Test
 {
-    auto base_dir = fs::absolute(__FILE__).parent_path();
-    auto fpath_base = std::string(test_info->test_suite_name()) + "_" +
-                      std::string(test_info->name()) + ".txt";
-    auto path_out = base_dir / "out" / fpath_base;
-    auto path_ref = base_dir / "ref" / fpath_base;
 
-    cint32_t size = 65536;
-    cint32_t bs = 64;
-    cint32_t fs = 48000;
-    cint32_t niter = size / bs;
-    std::ofstream ofs(path_out);
-    ofs << std::fixed << std::setprecision(8);
+protected:
+    float32_t **m_In = nullptr;
+    float32_t **m_Out = nullptr;
+    int32_t m_NumCh = 0;
+    int32_t m_NumEl = 0;
+    int32_t m_Blocksize = 64;
+    int32_t m_Fs = 48000;
+    CAtomBiquad m_Biquad;
+    fs::path m_PathOut;
+    fs::path m_PathRef;
+    fs::path m_BaseDir;
 
-    CQuarkProps props{
-        fs,
-        bs,
-        nch,
-        nch,
-        0,
-        0,
-        nel};
-    CAtomBiquad biquad;
-    biquad.init(props);
-
-    for (auto param : params)
+    AtomBiquad()
     {
-        biquad.set(&param, sizeof(CAtomBiquad::tAtomBiquadParams));
     }
 
-    float32_t **in = new float *[nch];
-    float32_t **out = new float *[nch];
-    for (auto ch = 0; ch < nch; ch++)
+    ~AtomBiquad() override
     {
-        in[ch] = new float32_t[bs]();
-        out[ch] = new float32_t[bs]();
     }
 
-    for (auto ch = 0; ch < nch; ch++)
+    void MySetUp(cint32_t nch, cint32_t nel, std::string ext = ".txt")
     {
-        // dirac
-        in[ch][0] = static_cast<float32_t>(size) / 2.0F;
-        for (auto i = 1; i < nel; i++)
-            in[ch][i] = 0.0F;
-    }
-    biquad.play(in, out);
-    for (auto sample = 0; sample < bs; sample++)
-    {
+        m_NumCh = nch;
+        m_NumEl = nel;
+        m_In = new float *[nch];
+        m_Out = new float *[nch];
         for (auto ch = 0; ch < nch; ch++)
         {
-            ofs << out[ch][sample] << ",";
+            m_In[ch] = new float32_t[m_Blocksize]();
+            m_Out[ch] = new float32_t[m_Blocksize]();
         }
-        ofs << std::endl;
+        CQuarkProps props{
+            m_Fs,
+            m_Blocksize,
+            m_NumCh,
+            m_NumCh,
+            0,
+            0,
+            m_NumEl};
+        m_Biquad.init(props);
+
+        auto test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+        m_BaseDir = fs::absolute(__FILE__).parent_path();
+        auto fpath_base = std::string(test_info->test_suite_name()) + "_" +
+                          std::string(test_info->name()) + ext;
+        m_PathOut = m_BaseDir / "out" / fpath_base;
+        m_PathRef = m_BaseDir / "ref" / fpath_base;
     }
 
-    for (auto ch = 0; ch < nch; ch++)
+    void TearDown() override
     {
-        // all zeros
-        for (auto i = 0; i < nel; i++)
-            in[ch][i] = 0.0F;
-    }
-
-    for (auto i = 1; i < niter; i++)
-    {
-        biquad.play(in, out);
-        for (auto sample = 0; sample < bs; sample++)
+        for (auto ch = 0; ch < m_NumCh; ch++)
         {
-            for (auto ch = 0; ch < nch; ch++)
+            delete[] m_In[ch];
+            delete[] m_Out[ch];
+        }
+        delete m_In;
+        delete m_Out;
+    }
+
+    void testDirac(
+        const std::vector<CAtomBiquad::tAtomBiquadParams> &params,
+        cint32_t nch,
+        cint32_t nel,
+        cfloat32_t eps = 4.E-5,
+        bool_t verbose = false)
+    {
+        MySetUp(nch, nel);
+
+        cint32_t size = 65536;
+        cint32_t niter = size / m_Blocksize;
+        std::ofstream ofs(m_PathOut);
+        ofs << std::fixed << std::setprecision(8);
+
+        for (auto param : params)
+        {
+            m_Biquad.set(&param, sizeof(CAtomBiquad::tAtomBiquadParams));
+        }
+
+        for (auto ch = 0; ch < m_NumCh; ch++)
+        {
+            // dirac
+            m_In[ch][0] = static_cast<float32_t>(size) / 2.0F;
+            for (auto i = 1; i < m_Blocksize; i++)
+                m_In[ch][i] = 0.0F;
+        }
+        m_Biquad.play(m_In, m_Out);
+        for (auto sample = 0; sample < m_Blocksize; sample++)
+        {
+            for (auto ch = 0; ch < m_NumCh; ch++)
             {
-                ofs << out[ch][sample] << ",";
+                ofs << m_Out[ch][sample] << ",";
             }
             ofs << std::endl;
         }
-    }
 
-    for (auto ch = 0; ch < nch; ch++)
-    {
-        delete[] in[ch];
-        delete[] out[ch];
-    }
-    delete in;
-    delete out;
+        for (auto ch = 0; ch < m_NumCh; ch++)
+        {
+            // all zeros
+            for (auto i = 0; i < m_Blocksize; i++)
+                m_In[ch][i] = 0.0F;
+        }
 
-    ASSERT_EQ(true, compare_csv(path_out.string(), path_ref.string()));
-}
+        for (auto i = 1; i < niter; i++)
+        {
+            m_Biquad.play(m_In, m_Out);
+            for (auto sample = 0; sample < m_Blocksize; sample++)
+            {
+                for (auto ch = 0; ch < m_NumCh; ch++)
+                {
+                    ofs << m_Out[ch][sample] << ",";
+                }
+                ofs << std::endl;
+            }
+        }
+
+        ASSERT_EQ(true, compare_csv(m_PathOut.string(), m_PathRef.string()));
+    }
+};
 
 //=============================================================
 // Test cases
 //=============================================================
 
-TEST(AtomBiquad, Bypass_IR)
+TEST_F(AtomBiquad, Bypass_IR)
 {
-    helper_test(
+    testDirac(
         {{
             0,                                     // ch;
             0,                                     // el;
@@ -124,13 +151,12 @@ TEST(AtomBiquad, Bypass_IR)
             0.0                                    // gainDb
         }},
         1,
-        1,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        1);
 }
 
-TEST(AtomBiquad, LPF_500Hz_0707q_0dB_IR)
+TEST_F(AtomBiquad, LPF_500Hz_0707q_0dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
             0,                                  // ch;
             0,                                  // el;
@@ -140,13 +166,12 @@ TEST(AtomBiquad, LPF_500Hz_0707q_0dB_IR)
             0.0                                 // gainDb
         }},
         1,
-        1,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        1);
 }
 
-TEST(AtomBiquad, LPF6DB_500Hz_0707q_0dB_IR)
+TEST_F(AtomBiquad, LPF6DB_500Hz_0707q_0dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
             0,                                      // ch;
             0,                                      // el;
@@ -156,13 +181,12 @@ TEST(AtomBiquad, LPF6DB_500Hz_0707q_0dB_IR)
             0.0                                     // gainDb
         }},
         1,
-        1,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        1);
 }
 
-TEST(AtomBiquad, HPF_500Hz_0707q_0dB_IR)
+TEST_F(AtomBiquad, HPF_500Hz_0707q_0dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
             0,                                  // ch;
             0,                                  // el;
@@ -172,13 +196,12 @@ TEST(AtomBiquad, HPF_500Hz_0707q_0dB_IR)
             0.0                                 // gainDb
         }},
         1,
-        1,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        1);
 }
 
-TEST(AtomBiquad, HPF6DB_500Hz_0707q_0dB_IR)
+TEST_F(AtomBiquad, HPF6DB_500Hz_0707q_0dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
             0,                                      // ch;
             0,                                      // el;
@@ -188,13 +211,12 @@ TEST(AtomBiquad, HPF6DB_500Hz_0707q_0dB_IR)
             0.0                                     // gainDb
         }},
         1,
-        1,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        1);
 }
 
-TEST(AtomBiquad, PEAK_100Hz_5000q_10dB_8kHz_10000q_m10dB_IR)
+TEST_F(AtomBiquad, PEAK_100Hz_5000q_10dB_8kHz_10000q_m10dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
              0,                                   // ch;
              0,                                   // el;
@@ -212,13 +234,12 @@ TEST(AtomBiquad, PEAK_100Hz_5000q_10dB_8kHz_10000q_m10dB_IR)
              -10.0                                // gainDb
          }},
         1,
-        2,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        2);
 }
 
-TEST(AtomBiquad, NOTCH_100Hz_1000q_10dB_8kHz_10000q_m10dB_IR)
+TEST_F(AtomBiquad, NOTCH_100Hz_1000q_10dB_8kHz_10000q_m10dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
              0,                                    // ch;
              0,                                    // el;
@@ -236,13 +257,12 @@ TEST(AtomBiquad, NOTCH_100Hz_1000q_10dB_8kHz_10000q_m10dB_IR)
              -10.0                                 // gainDb
          }},
         1,
-        2,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        2);
 }
 
-TEST(AtomBiquad, LSH_8kHz_1500q_3dB_HSH_300Hz_5000q_m10dB_IR)
+TEST_F(AtomBiquad, LSH_8kHz_1500q_3dB_HSH_300Hz_5000q_m10dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
              0,                                  // ch;
              0,                                  // el;
@@ -260,13 +280,12 @@ TEST(AtomBiquad, LSH_8kHz_1500q_3dB_HSH_300Hz_5000q_m10dB_IR)
              -10.0                               // gainDb
          }},
         1,
-        2,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        2);
 }
 
-TEST(AtomBiquad, HSH_8kHz_0707q_3dB_LSH_300Hz_0707q_m10dB_IR)
+TEST_F(AtomBiquad, HSH_8kHz_0707q_3dB_LSH_300Hz_0707q_m10dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
              0,                                  // ch;
              0,                                  // el;
@@ -284,13 +303,12 @@ TEST(AtomBiquad, HSH_8kHz_0707q_3dB_LSH_300Hz_0707q_m10dB_IR)
              -10.0                               // gainDb
          }},
         1,
-        2,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        2);
 }
 
-TEST(AtomBiquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB_IR)
+TEST_F(AtomBiquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
              0,                                  // ch;
              0,                                  // el;
@@ -308,13 +326,12 @@ TEST(AtomBiquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB_IR)
              -10.0                               // gainDb
          }},
         1,
-        2,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        2);
 }
 
-TEST(AtomBiquad, APF_500Hz_0707q_0dB_IR)
+TEST_F(AtomBiquad, APF_500Hz_0707q_0dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
             0,                                  // ch;
             0,                                  // el;
@@ -324,14 +341,13 @@ TEST(AtomBiquad, APF_500Hz_0707q_0dB_IR)
             0.0                                 // gainDb
         }},
         1,
-        1,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        1);
 }
 
 #if 0
-TEST(AtomBiquad, APF180_500Hz_0707q_0dB_IR)
+TEST_F(AtomBiquad, APF180_500Hz_0707q_0dB_IR)
 {
-    helper_test(
+    testDirac(
         {{
             0,                                      // ch;
             0,                                      // el;
@@ -341,7 +357,75 @@ TEST(AtomBiquad, APF180_500Hz_0707q_0dB_IR)
             0.0                                     // gainDb
         }},
         1,
-        1,
-        ::testing::UnitTest::GetInstance()->current_test_info());
+        1);
 }
 #endif
+
+TEST_F(AtomBiquad, Multisine_PEAK_Gain_Moprh)
+{
+    MySetUp(1, 3, ".wav");
+
+    auto path_in = m_BaseDir / "in" / "Multisine_100_1k_10k_3s.wav";
+    std::vector<float32_t> wav_in = read_wav(path_in.string(), 0);
+    cint32_t niter = ((cint32_t)wav_in.size() + m_Blocksize - 1) / m_Blocksize;
+    std::vector<float32_t> wav_out(niter * m_Blocksize);
+
+    m_Biquad.setMorphMs(500.0F);
+
+    std::vector<CAtomBiquad::tAtomBiquadParams> params =
+        {{
+             0,                                   // ch;
+             0,                                   // el;
+             CAtomBiquad::eBiquadType::BIQT_PEAK, // type
+             100.0F,                              // freq
+             5.000F,                              // q
+             6.0                                  // gainDb
+         },
+         {
+             0,                                   // ch;
+             1,                                   // el;
+             CAtomBiquad::eBiquadType::BIQT_PEAK, // type
+             1000.0F,                             // freq
+             5.000F,                              // q
+             -60.0                                // gainDb
+         },
+         {
+             0,                                   // ch;
+             2,                                   // el;
+             CAtomBiquad::eBiquadType::BIQT_PEAK, // type
+             10000.0F,                            // freq
+             5.000F,                              // q
+             -60.0                                // gainDb
+         }};
+
+    for (auto param : params)
+    {
+        m_Biquad.set(&param, sizeof(CAtomBiquad::tAtomBiquadParams));
+    }
+
+    for(auto n = 0; n < niter; n++)
+    {
+        if(n == niter / 3)
+        {
+            params[0].gainDb = -60.0;
+            params[1].gainDb = 6.0;
+            m_Biquad.set(&params[0], sizeof(CAtomBiquad::tAtomBiquadParams));
+            m_Biquad.set(&params[1], sizeof(CAtomBiquad::tAtomBiquadParams));
+        }
+        else if(n == 2 * niter / 3)
+        {
+            params[1].gainDb = -60.0;
+            params[2].gainDb = 6.0;
+            m_Biquad.set(&params[1], sizeof(CAtomBiquad::tAtomBiquadParams));
+            m_Biquad.set(&params[2], sizeof(CAtomBiquad::tAtomBiquadParams));
+        }
+
+        for (auto i = 0; i < m_Blocksize; i++)
+            m_In[0][i] = wav_in[m_Blocksize * n + i];
+        m_Biquad.play(m_In, m_Out);
+        for (auto i = 0; i < m_Blocksize; i++)
+            wav_out[m_Blocksize * n + i] = m_Out[0][i];
+    }
+    write_wav(m_PathOut.string(), wav_out);
+    ASSERT_EQ(true, compare_wav(m_PathOut.string(), m_PathRef.string()));
+}

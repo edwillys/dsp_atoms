@@ -28,6 +28,15 @@ void write_wav(const std::string &outwav, const std::vector<float32_t> &content,
 /**
  * @brief 
  * 
+ * @param path_wav 
+ * @param ch 
+ * @return std::vector<float32_t> 
+ */
+std::vector<float32_t> read_wav(const std::string &path_wav, cint32_t ch);
+
+/**
+ * @brief 
+ * 
  * @param wavL 
  * @param wavR 
  * @param eps 
