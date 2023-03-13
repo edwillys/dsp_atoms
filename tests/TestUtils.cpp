@@ -2,6 +2,7 @@
 #include <sndfile.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 //=============================================================
 // Helper functions
@@ -24,6 +25,56 @@ std::vector<std::string> split(const std::string &s, const std::string &delimite
     return res;
 }
 
+std::vector<std::string> split(const std::string &s, const char delim)
+{
+    std::vector<std::string> result;
+    std::stringstream ss(s);
+    std::string item;
+
+    while (getline(ss, item, delim))
+    {
+        result.push_back(item);
+    }
+
+    return result;
+}
+
+std::vector<std::vector<float32_t>> deinterleave(const std::vector<float32_t> &in, cint32_t nch)
+{
+    std::vector<std::vector<float32_t>> out(nch);
+    cint32_t len = in.size() / nch;
+
+    for (auto ch = 0; ch < nch; ch++)
+        out[ch].resize(len);
+
+    for (auto ch = 0; ch < nch; ch++)
+    {
+        for (auto i = 0; i < len; i++)
+        {
+            out[ch][i] = in[i * nch + ch];
+        }
+    }
+
+    return out;
+}
+
+std::vector<float32_t> interleave(const std::vector<std::vector<float32_t>> &in)
+{
+    auto nch = in.size();
+    auto len = in[0].size();
+    std::vector<float32_t> out(nch * len);
+
+    for (auto ch = 0; ch < nch; ch++)
+    {
+        for (auto i = 0; i < len; i++)
+        {
+            out[i * nch + ch] = in[ch][i];
+        }
+    }
+
+    return out;
+}
+
 void write_wav(const std::string &outwav, const std::vector<float32_t> &content,
                cint32_t fs, cint32_t bps, cint32_t nch)
 {
@@ -31,6 +82,7 @@ void write_wav(const std::string &outwav, const std::vector<float32_t> &content,
     SF_INFO info;
     info.channels = nch;
     info.samplerate = fs;
+    info.frames = content.size();
     info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
     SNDFILE *const sndfile = sf_open(outwav.c_str(), SFM_WRITE, &info);
 
@@ -50,12 +102,19 @@ void write_wav(const std::string &outwav, const std::vector<float32_t> &content,
     }
 }
 
-std::vector<float32_t> read_wav(const std::string &path_wav, cint32_t ch)
+void write_wav(const std::string &outwav, const std::vector<std::vector<float32_t>> &content,
+               cint32_t fs, cint32_t bps)
+{
+    std::vector<float32_t> content_interleaved = interleave(content);
+    write_wav(outwav, content_interleaved, fs, bps, (cint32_t)content.size());
+}
+
+std::vector<std::vector<float32_t>> read_wav(const std::string &path_wav)
 {
     // write that same content to another file
     SF_INFO info;
     SNDFILE *const sndfile = sf_open(path_wav.c_str(), SFM_READ, &info);
-    std::vector<float32_t> wav;
+    std::vector<std::vector<float32_t>> wav;
 
     if (sndfile == NULL)
     {
@@ -63,14 +122,11 @@ std::vector<float32_t> read_wav(const std::string &path_wav, cint32_t ch)
     }
     else
     {
-        if (ch < info.channels)
-        {
-            wav.resize(info.frames);
-            // Read data
-            sf_seek(sndfile, ch * info.frames, SEEK_SET);
-            sf_read_float(sndfile, &wav[0], info.frames);
-            sf_close(sndfile);
-        }
+        std::vector<float32_t> wavInterleaved(info.channels * info.frames);
+        // Read data
+        sf_read_float(sndfile, &wavInterleaved[0], info.channels * info.frames);
+        sf_close(sndfile);
+        wav = deinterleave(wavInterleaved, info.channels);
     }
 
     return wav;
@@ -139,8 +195,8 @@ bool compare_csv(const std::string &left, const std::string &right, float32_t ep
     {
         while (std::getline(ifs_left, line_left) && std::getline(ifs_right, line_right))
         {
-            auto line_split_left = split(line_left, ",");
-            auto line_split_right = split(line_right, ",");
+            auto line_split_left = split(line_left, ',');
+            auto line_split_right = split(line_right, ',');
 
             if (line_split_left.size() != line_split_right.size())
             {
@@ -153,7 +209,7 @@ bool compare_csv(const std::string &left, const std::string &right, float32_t ep
                 {
                     auto float_left = std::atof(line_split_left[i].c_str());
                     auto float_right = std::atof(line_split_right[i].c_str());
-                    if (fabsf(float_left - float_right) > eps)
+                    if (fabs(float_left - float_right) > eps)
                     {
                         retval = false;
                         break;

@@ -30,6 +30,7 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/ResamplerTests.cpp
     ${CMAKE_SOURCE_DIR}/UpFirDownTests.cpp
     ${CMAKE_SOURCE_DIR}/AtomBiquadTests.cpp
+    ${CMAKE_SOURCE_DIR}/AtomGainTests.cpp
     ${CMAKE_SOURCE_DIR}/TestUtils.cpp
     ${CMAKE_SOURCE_DIR}/../src/Sample.cpp
     ${CMAKE_SOURCE_DIR}/../src/Resampler.cpp

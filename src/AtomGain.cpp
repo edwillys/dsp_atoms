@@ -4,9 +4,9 @@ int32_t CAtomGain::init(const CQuarkProps &props)
 {
     setProps(props);
 
-    m_TargetGains = new float32_t[props.m_NumChOut];
-    m_DeltaGains = new float32_t[props.m_NumChOut];
-    m_Gains = new float32_t[props.m_NumChOut];
+    m_TargetGains = new float32_t[props.m_NumChOut]();
+    m_DeltaGains = new float32_t[props.m_NumChOut]();
+    m_Gains = new float32_t[props.m_NumChOut]();
 
     return 0;
 }
@@ -58,7 +58,7 @@ void CAtomGain::play(float32_t **const in, float32_t **const out)
 void CAtomGain::set(cint32_t ch, cint32_t el, cfloat32_t value)
 {
     float32_t gainDb = CLIP(value, MUTE_DB_FS, 50.0F);
-    float32_t targetGainLin = powf(10.F, gainDb) * 0.05F;
+    float32_t targetGainLin = gainDb <= MUTE_DB_FS ? 0.0F : powf(10.F, gainDb * 0.05F);
 
     if (ch == SET_ALL_CH_IND)
     {
@@ -73,6 +73,7 @@ void CAtomGain::set(cint32_t ch, cint32_t el, cfloat32_t value)
         m_TargetGains[ch] = targetGainLin;
         m_DeltaGains[ch] = (targetGainLin - m_Gains[ch]) / (m_MorphBlocksizeTotal * m_Props.m_BlockSize);
     }
+    startMorph();
 }
 
 void CAtomGain::calculateDeltas(void)

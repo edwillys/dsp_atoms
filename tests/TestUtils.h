@@ -6,12 +6,35 @@
 
 /**
  * @brief Splits a string according to a delimiter
- * 
- * @param s 
- * @param delimiter 
- * @return std::vector<std::string> 
+ *
+ * @param s
+ * @param delimiter
+ * @return std::vector<std::string>
  */
 std::vector<std::string> split(const std::string &s, const std::string &delimiter);
+
+/**
+ * @brief
+ *
+ * @param s
+ * @param delim
+ * @return std::vector<std::string>
+ */
+std::vector<std::string> split(const std::string &s, const char delim);
+
+/**
+ * @brief
+ *
+ */
+std::vector<std::vector<float32_t>> deinterleave(const std::vector<float32_t> &in, cint32_t nch);
+
+/**
+ * @brief
+ *
+ * @param in
+ * @return std::vector<float32_t>
+ */
+std::vector<float32_t> interleave(const std::vector<std::vector<float32_t>> &in);
 
 /**
  * @brief
@@ -26,44 +49,54 @@ void write_wav(const std::string &outwav, const std::vector<float32_t> &content,
                cint32_t fs = 48000, cint32_t bps = 16, cint32_t nch = 1);
 
 /**
- * @brief 
- * 
- * @param path_wav 
- * @param ch 
- * @return std::vector<float32_t> 
+ * @brief
+ *
+ * @param outwav
+ * @param content
+ * @param fs
+ * @param bps
  */
-std::vector<float32_t> read_wav(const std::string &path_wav, cint32_t ch);
+void write_wav(const std::string &outwav, const std::vector<std::vector<float32_t>> &content,
+               cint32_t fs = 48000, cint32_t bps = 16);
 
 /**
- * @brief 
- * 
- * @param wavL 
- * @param wavR 
- * @param eps 
- * @return true 
- * @return false 
+ * @brief
+ *
+ * @param path_wav
+ * @return std::vector<std::vector<float32_t>>
+ */
+std::vector<std::vector<float32_t>> read_wav(const std::string &path_wav);
+
+/**
+ * @brief
+ *
+ * @param wavL
+ * @param wavR
+ * @param eps
+ * @return true
+ * @return false
  */
 bool compare_wav(const std::string &wavL, const std::string &wavR,
                  float32_t eps = 1e-9);
 
 /**
- * @brief 
- * 
- * @param left 
- * @param right 
- * @param eps 
- * @return true 
- * @return false 
+ * @brief
+ *
+ * @param left
+ * @param right
+ * @param eps
+ * @return true
+ * @return false
  */
 bool compare_csv(const std::string &left, const std::string &right, float32_t eps = 1e-9);
 
 /**
- * @brief 
- * 
- * @tparam T 
- * @param v 
- * @param n 
- * @return std::vector<std::vector<T>> 
+ * @brief
+ *
+ * @tparam T
+ * @param v
+ * @param n
+ * @return std::vector<std::vector<T>>
  */
 template <typename T>
 std::vector<std::vector<T>> split(std::vector<T> &v, int32_t n)
@@ -83,12 +116,12 @@ std::vector<std::vector<T>> split(std::vector<T> &v, int32_t n)
 }
 
 /**
- * @brief 
- * 
- * @tparam T 
- * @param v 
- * @param n 
- * @return std::vector<std::vector<T>> 
+ * @brief
+ *
+ * @tparam T
+ * @param v
+ * @param n
+ * @return std::vector<std::vector<T>>
  */
 template <typename T>
 std::vector<std::vector<T>> split(std::vector<T> &v, std::vector<int32_t> n)

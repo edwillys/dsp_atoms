@@ -102,13 +102,18 @@ protected:
                 m_In[ch][i] = 0.0F;
         }
         m_Biquad.play(m_In, m_Out);
-        for (auto sample = 0; sample < m_Blocksize; sample++)
+
+        if (m_NumCh > 0)
         {
-            for (auto ch = 0; ch < m_NumCh; ch++)
+            for (auto sample = 0; sample < m_Blocksize; sample++)
             {
-                ofs << m_Out[ch][sample] << ",";
+                ofs << m_Out[0][sample];
+                for (auto ch = 1; ch < m_NumCh; ch++)
+                {
+                    ofs << "," << m_Out[ch][sample];
+                }
+                ofs << std::endl;
             }
-            ofs << std::endl;
         }
 
         for (auto ch = 0; ch < m_NumCh; ch++)
@@ -121,13 +126,17 @@ protected:
         for (auto i = 1; i < niter; i++)
         {
             m_Biquad.play(m_In, m_Out);
-            for (auto sample = 0; sample < m_Blocksize; sample++)
+            if (m_NumCh > 0)
             {
-                for (auto ch = 0; ch < m_NumCh; ch++)
+                for (auto sample = 0; sample < m_Blocksize; sample++)
                 {
-                    ofs << m_Out[ch][sample] << ",";
+                    ofs << m_Out[0][sample];
+                    for (auto ch = 1; ch < m_NumCh; ch++)
+                    {
+                        ofs << "," << m_Out[ch][sample];
+                    }
+                    ofs << std::endl;
                 }
-                ofs << std::endl;
             }
         }
 
@@ -306,6 +315,29 @@ TEST_F(AtomBiquad, HSH_8kHz_0707q_3dB_LSH_300Hz_0707q_m10dB_IR)
         2);
 }
 
+TEST_F(AtomBiquad, HSH_8kHz_0707q_3dB_LSH_300Hz_0707q_m10dB_2ch_IR)
+{
+    testDirac(
+        {{
+             0,                                  // ch;
+             0,                                  // el;
+             CAtomBiquad::eBiquadType::BIQT_HSH, // type
+             8000.0F,                            // freq
+             0.707F,                             // q
+             3.0                                 // gainDb
+         },
+         {
+             1,                                  // ch;
+             0,                                  // el;
+             CAtomBiquad::eBiquadType::BIQT_LSH, // type
+             300.0F,                             // freq
+             0.707F,                             // q
+             -10.0                               // gainDb
+         }},
+        2,
+        1);
+}
+
 TEST_F(AtomBiquad, LPF_8kHz_1500q_3dB_HPF_300Hz_5000q_m10dB_IR)
 {
     testDirac(
@@ -361,13 +393,13 @@ TEST_F(AtomBiquad, APF180_500Hz_0707q_0dB_IR)
 }
 #endif
 
-TEST_F(AtomBiquad, Multisine_PEAK_Gain_Moprh)
+TEST_F(AtomBiquad, Multisine_PEAK_Gain_Morph)
 {
     MySetUp(1, 3, ".wav");
 
     auto path_in = m_BaseDir / "in" / "Multisine_100_1k_10k_3s.wav";
-    std::vector<float32_t> wav_in = read_wav(path_in.string(), 0);
-    cint32_t niter = ((cint32_t)wav_in.size() + m_Blocksize - 1) / m_Blocksize;
+    auto wav_in = read_wav(path_in.string());
+    cint32_t niter = ((cint32_t)wav_in[0].size() + m_Blocksize - 1) / m_Blocksize;
     std::vector<float32_t> wav_out(niter * m_Blocksize);
 
     m_Biquad.setMorphMs(500.0F);
@@ -403,16 +435,16 @@ TEST_F(AtomBiquad, Multisine_PEAK_Gain_Moprh)
         m_Biquad.set(&param, sizeof(CAtomBiquad::tAtomBiquadParams));
     }
 
-    for(auto n = 0; n < niter; n++)
+    for (auto n = 0; n < niter; n++)
     {
-        if(n == niter / 3)
+        if (n == niter / 3)
         {
             params[0].gainDb = -60.0;
             params[1].gainDb = 6.0;
             m_Biquad.set(&params[0], sizeof(CAtomBiquad::tAtomBiquadParams));
             m_Biquad.set(&params[1], sizeof(CAtomBiquad::tAtomBiquadParams));
         }
-        else if(n == 2 * niter / 3)
+        else if (n == 2 * niter / 3)
         {
             params[1].gainDb = -60.0;
             params[2].gainDb = 6.0;
@@ -421,7 +453,7 @@ TEST_F(AtomBiquad, Multisine_PEAK_Gain_Moprh)
         }
 
         for (auto i = 0; i < m_Blocksize; i++)
-            m_In[0][i] = wav_in[m_Blocksize * n + i];
+            m_In[0][i] = wav_in[0][m_Blocksize * n + i];
         m_Biquad.play(m_In, m_Out);
         for (auto i = 0; i < m_Blocksize; i++)
             wav_out[m_Blocksize * n + i] = m_Out[0][i];
