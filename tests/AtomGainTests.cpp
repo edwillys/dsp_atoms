@@ -157,3 +157,48 @@ TEST_F(AtomGain, Multisine_Gain_Morph_Stereo)
     write_wav(m_PathOut.string(), wavOut);
     ASSERT_EQ(true, compare_wav(m_PathOut.string(), m_PathRef.string()));
 }
+
+TEST_F(AtomGain, Multisine_Gain_NoMorph_Stereo)
+{
+    MySetUp(2, 0);
+
+    auto path_in = m_BaseDir / "in" / "Multisine_100_1k_10k_3s_2ch.wav";
+    auto wavIn = read_wav(path_in.string());
+    cint32_t niter = ((cint32_t)wavIn[0].size() + m_Blocksize - 1) / m_Blocksize;
+    std::vector<std::vector<float32_t>> wavOut(2);
+    wavOut[0].resize(niter * m_Blocksize);
+    wavOut[1].resize(niter * m_Blocksize);
+
+    m_Gain.setMorphMs(0.0F);
+    m_Gain.set(SET_ALL_CH_IND, 0, -10.0F);
+
+    for (auto n = 0; n < niter; n++)
+    {
+        if (n == niter / 4)
+        {
+            m_Gain.set(0, 0, 3.0F);
+        }
+        else if (n == niter / 2)
+        {
+            m_Gain.set(1, 0, 3.0F);
+        }
+        else if (n == 3 * niter / 4)
+        {
+            m_Gain.set(SET_ALL_CH_IND, 0, -140.0F);
+        }
+
+        for (auto i = 0; i < m_Blocksize; i++)
+        {
+            m_In[0][i] = wavIn[0][m_Blocksize * n + i];
+            m_In[1][i] = wavIn[1][m_Blocksize * n + i];
+        }
+        m_Gain.play(m_In, m_Out);
+        for (auto i = 0; i < m_Blocksize; i++)
+        {
+            wavOut[0][m_Blocksize * n + i] = m_Out[0][i];
+            wavOut[1][m_Blocksize * n + i] = m_Out[1][i];
+        }
+    }
+    write_wav(m_PathOut.string(), wavOut);
+    ASSERT_EQ(true, compare_wav(m_PathOut.string(), m_PathRef.string()));
+}

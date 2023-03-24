@@ -130,7 +130,7 @@ std::vector<std::vector<T>> split(std::vector<T> &v, std::vector<int32_t> n)
     int32_t sum = 0;
     for (auto it = n.begin(); it != n.end(); it++)
         sum += (*it);
-    v.resize(ceil(v.size() / (float32_t)sum) * sum);
+    v.resize((int32_t)ceil(v.size() / (float32_t)sum) * sum);
     int32_t offset = 0, i = 0;
     while (offset < v.size())
     {

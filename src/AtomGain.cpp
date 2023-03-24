@@ -65,14 +65,13 @@ void CAtomGain::set(cint32_t ch, cint32_t el, cfloat32_t value)
         for (auto c = 0; c < m_Props.m_NumChOut; c++)
         {
             m_TargetGains[c] = targetGainLin;
-            m_DeltaGains[c] = (targetGainLin - m_Gains[c]) / (m_MorphBlocksizeTotal * m_Props.m_BlockSize);
         }
     }
     else
     {
         m_TargetGains[ch] = targetGainLin;
-        m_DeltaGains[ch] = (targetGainLin - m_Gains[ch]) / (m_MorphBlocksizeTotal * m_Props.m_BlockSize);
     }
+    calculateDeltas();
     startMorph();
 }
 

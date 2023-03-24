@@ -42,7 +42,7 @@ std::vector<std::string> split(const std::string &s, const char delim)
 std::vector<std::vector<float32_t>> deinterleave(const std::vector<float32_t> &in, cint32_t nch)
 {
     std::vector<std::vector<float32_t>> out(nch);
-    cint32_t len = in.size() / nch;
+    cint32_t len = (cint32_t)in.size() / nch;
 
     for (auto ch = 0; ch < nch; ch++)
         out[ch].resize(len);
