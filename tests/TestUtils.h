@@ -3,6 +3,75 @@
 #include <vector>
 #include <string>
 #include "AudioTypes.h"
+#include "gtest/gtest.h"
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
+template <class T>
+class AtomTest : public ::testing::Test
+{
+
+protected:
+    float32_t **m_In = nullptr;
+    float32_t **m_Out = nullptr;
+    int32_t m_NumCh = 0;
+    int32_t m_NumEl = 0;
+    int32_t m_Blocksize = 64;
+    int32_t m_Fs = 48000;
+    T m_Atom;
+    fs::path m_PathOut;
+    fs::path m_PathRef;
+    fs::path m_BaseDir;
+
+    AtomTest()
+    {
+    }
+
+    ~AtomTest() override
+    {
+    }
+
+    void MySetUp(cint32_t nch, cint32_t nel, std::string ext = ".wav")
+    {
+        m_NumCh = nch;
+        m_NumEl = nel;
+        m_In = new float *[nch];
+        m_Out = new float *[nch];
+        for (auto ch = 0; ch < nch; ch++)
+        {
+            m_In[ch] = new float32_t[m_Blocksize]();
+            m_Out[ch] = new float32_t[m_Blocksize]();
+        }
+        CQuarkProps props{
+            m_Fs,
+            m_Blocksize,
+            m_NumCh,
+            m_NumCh,
+            0,
+            0,
+            m_NumEl};
+        m_Atom.init(props);
+
+        auto test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+        m_BaseDir = fs::absolute(__FILE__).parent_path();
+        auto fpath_base = std::string(test_info->test_suite_name()) + "_" +
+                          std::string(test_info->name()) + ext;
+        m_PathOut = m_BaseDir / "out" / fpath_base;
+        m_PathRef = m_BaseDir / "ref" / fpath_base;
+    }
+
+    void TearDown() override
+    {
+        for (auto ch = 0; ch < m_NumCh; ch++)
+        {
+            delete[] m_In[ch];
+            delete[] m_Out[ch];
+        }
+        delete m_In;
+        delete m_Out;
+    }
+};
 
 /**
  * @brief Splits a string according to a delimiter
