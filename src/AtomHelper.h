@@ -105,8 +105,8 @@ namespace NAtomHelper
 
             /* Iteration two (if needed based on the condition number) */
             // TODO: should we simply to the 2nd step regardless?
-            const T eps = std::numeric_limits<T>::epsilon();
-            if (fabs((2.0 * w * w - 8.0 * w - 1.0) * pow(fabs(r), 4.0)) >= eps * 72.0 * pow(fabs(wp1), 6.0))
+            // const T eps = std::numeric_limits<T>::epsilon();
+            // if (fabs((2.0 * w * w - 8.0 * w - 1.0) * pow(fabs(r), 4.0)) >= eps * 72.0 * pow(fabs(wp1), 6.0))
             {
                 r = x - w - LOG(w);
                 wp1 = w + static_cast<T>(1.0);

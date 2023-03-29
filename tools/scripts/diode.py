@@ -94,17 +94,20 @@ class diode:
         I = (Vin - y_2d) / (R + self.RS)
         CD = self.TT / Vt * I + self.CJO / ((1.0 - y_2d / self.VJ) ** self.M)
 
-        dic_ret = {
+        dic_y = {
             "y_1d": y_1d,
             "y_2d": y_2d,
             "y_2d_simp": y_2d_simp,
             "y_2d_omega": y_2d_omega,
             "y_2d_dangelo": y_2d_dangelo,
+        }
+
+        dic_extra = {
             "I": I,
             "tau": (self.RS+R)*CD,
         }
 
-        return dic_ret
+        return dic_y, dic_extra
 
 
 # 1N4148
@@ -120,7 +123,7 @@ diode_1N4148_float64 = diode(
 )
 diode_1N4148_float32 = diode_1N4148_float64.clone(np.float32)
 
-normalize = True
+normalize = False
 write_wav = True
 # R = [10, 1000, 10000, 100000, 1000000]
 R = [10000]
@@ -147,8 +150,8 @@ min_w0 = np.inf
 
 plt.plot(t, Vin, label="Vin")
 for r in R:
-    y_f64 = diode_1N4148_float64.calc(Vin, r)
-    y_f32 = diode_1N4148_float32.calc(Vin, r)
+    y_f64, extra_f64 = diode_1N4148_float64.calc(Vin, r)
+    y_f32, extra_f32 = diode_1N4148_float32.calc(Vin, r)
 
     for key in y_f64:
         y_f64[key] = np.real(y_f64[key])
@@ -171,7 +174,7 @@ for r in R:
     diff_omega = max(abs(y_f64["y_2d_simp"]-y_f32["y_2d_omega"]))
     max_diff_omega = max(diff_omega, max_diff_omega)
 
-    w0 = np.abs(1.0 / (2.0 * np.pi * y_f64["tau"]))
+    w0 = np.abs(1.0 / (2.0 * np.pi * extra_f64["tau"]))
     min_w0 = min(min(w0), min_w0)
 
     if write_wav:

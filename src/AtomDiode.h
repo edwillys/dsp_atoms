@@ -43,20 +43,24 @@ public:
 
 protected:
     void calculateDeltas(void) override;
-    
+
     // Diode parameters
     static const tAtomDiodeSpiceParams m_DiodeParams[NUM_DIODE_T];
-    
+
     // Physical constants
     const float32_t m_k = 1.38e-23F; // Boltzmann
-    const float32_t m_q = 1.6e-19F; // electron charge
-    const float32_t m_TempC = 20.F; // Temperature in Celcius
+    const float32_t m_q = 1.6e-19F;  // electron charge
+    const float32_t m_TempC = 20.F;  // Temperature in Celcius
     const float32_t m_Vt = m_k * (273.F + m_TempC) / m_q;
-    
+
     float32_t *m_TargetGains = nullptr;
     float32_t *m_DeltaGains = nullptr;
     float32_t *m_Gains = nullptr;
-    float32_t *m_MakeUpGain = nullptr;
+
+    float32_t *m_MakeUpGains = nullptr;
+    float32_t *m_MakeUpDeltaGains = nullptr;
+    float32_t *m_MakeUpTargetGains = nullptr;
+
     eDiodeTypes m_Mode = DIODE_T_1N4148;
-    bool_t m_Normalize = true;
+    bool_t m_Normalize = false;
 };

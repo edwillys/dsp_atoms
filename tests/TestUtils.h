@@ -77,7 +77,7 @@ std::vector<std::vector<float32_t>> read_wav(const std::string &path_wav);
  * @return false
  */
 bool compare_wav(const std::string &wavL, const std::string &wavR,
-                 float32_t eps = 1e-9);
+                 float32_t eps = 1.F / 32767); // approx -90dB (1 bit out of 16 for the PCM WAV)
 
 /**
  * @brief

@@ -21,9 +21,14 @@ int32_t CAtomDiode::init(const CQuarkProps &props)
     m_DeltaGains = new float32_t[props.m_NumChOut]();
     m_Gains = new float32_t[props.m_NumChOut]();
 
-    m_MakeUpGain = new float32_t[props.m_NumChOut];
+    m_MakeUpDeltaGains = new float32_t[props.m_NumChOut]();
+    m_MakeUpTargetGains = new float32_t[props.m_NumChOut];
+    m_MakeUpGains = new float32_t[props.m_NumChOut];
     for (auto i = 0; i < props.m_NumChOut; i++)
-        m_MakeUpGain[i] = 1.0F;
+    {
+        m_MakeUpGains[i] = 1.0F;
+        m_MakeUpTargetGains[i] = 1.0F;
+    }
 
     return 0;
 }
@@ -44,14 +49,16 @@ void CAtomDiode::play(float32_t **const in, float32_t **const out)
                 float32_t *pIn = in[ch];
                 float32_t *pOut = out[ch];
                 float32_t *pGain = &m_Gains[ch];
-                float32_t *pMupGain = &m_MakeUpGain[ch];
                 float32_t *pDeltaGain = &m_DeltaGains[ch];
+                float32_t *pMupGain = &m_MakeUpGains[ch];
+                float32_t *pMupDeltaGain = &m_MakeUpDeltaGains[ch];
 
                 for (auto i = 0; i < m_Props.m_BlockSize; i++)
                 {
                     *pGain += *pDeltaGain;
+                    *pMupGain += *pMupDeltaGain;
                     float32_t a0 = pParams->IS * (*pGain + pParams->RS);
-                    float32_t a2 = LOG(a0 * a1);
+                    float32_t a2 = LOG(a0 * a1); // TODO: avoid this
                     float32_t absIn = fabs(pIn[i]);
                     float32_t w = NAtomHelper::WrightOmegaReal<float32_t>(a1 * (absIn + a0) + a2);
                     pOut[i] = absIn + a0 - w / a1;
@@ -75,7 +82,7 @@ void CAtomDiode::play(float32_t **const in, float32_t **const out)
             {
                 float32_t *pIn = in[ch];
                 float32_t *pOut = out[ch];
-                float32_t *pMupGain = &m_MakeUpGain[ch];
+                float32_t *pMupGain = &m_MakeUpGains[ch];
                 float32_t a0 = pParams->IS * (m_Gains[ch] + pParams->RS);
                 float32_t a2 = LOG(a0 * a1);
                 for (auto i = 0; i < m_Props.m_BlockSize; i++)
@@ -97,7 +104,7 @@ void CAtomDiode::set(cint32_t ch, cint32_t el, cfloat32_t value)
 {
     float32_t targetGain = CLIP(value, 10.F, 10000000.F);
 
-    float32_t mupGain = 1.0;
+    float32_t mupTargetGain = 1.0F;
     if (m_Normalize)
     {
         const tAtomDiodeSpiceParams *pParams = &m_DiodeParams[m_Mode];
@@ -107,7 +114,7 @@ void CAtomDiode::set(cint32_t ch, cint32_t el, cfloat32_t value)
         float32_t absIn = 1.0F;
         float32_t w = NAtomHelper::WrightOmegaReal<float32_t>(a1 * (absIn + a0) + a2);
         float32_t out = absIn + a0 - w / a1;
-        mupGain = 1.F / out;
+        mupTargetGain = 1.F / out;
     }
 
     if (ch == SET_ALL_CH_IND)
@@ -115,13 +122,13 @@ void CAtomDiode::set(cint32_t ch, cint32_t el, cfloat32_t value)
         for (auto c = 0; c < m_Props.m_NumChOut; c++)
         {
             m_TargetGains[c] = targetGain;
-            m_MakeUpGain[c] = mupGain;
+            m_MakeUpTargetGains[c] = mupTargetGain;
         }
     }
     else
     {
         m_TargetGains[ch] = targetGain;
-        m_MakeUpGain[ch] = mupGain;
+        m_MakeUpTargetGains[ch] = mupTargetGain;
     }
 
     calculateDeltas();
@@ -135,6 +142,7 @@ void CAtomDiode::calculateDeltas(void)
         for (auto c = 0; c < m_Props.m_NumChOut; c++)
         {
             m_DeltaGains[c] = (m_TargetGains[c] - m_Gains[c]) / (m_MorphBlocksizeTotal * m_Props.m_BlockSize);
+            m_MakeUpDeltaGains[c] = (m_MakeUpTargetGains[c] - m_MakeUpGains[c]) / (m_MorphBlocksizeTotal * m_Props.m_BlockSize);
         }
     }
     else
@@ -143,6 +151,9 @@ void CAtomDiode::calculateDeltas(void)
         {
             m_DeltaGains[c] = 0.0F;
             m_Gains[c] = m_TargetGains[c];
+
+            m_MakeUpDeltaGains[c] = 0.0F;
+            m_MakeUpGains[c] = m_MakeUpTargetGains[c];
         }
     }
 }

@@ -166,9 +166,12 @@ bool compare_wav(const std::string &wavL, const std::string &wavR, float32_t eps
         sf_read_float(sndfile[0], &buf_ref[0][0], info[0].frames);
         sf_read_float(sndfile[1], &buf_ref[1][0], info[1].frames);
 
+        float32_t max_diff = 0.F; // for debugging 
         for (auto j = 0; j < info[0].frames; j++)
         {
-            if (fabsf(buf_ref[0][j] - buf_ref[1][j]) > eps)
+            auto diff = fabs(buf_ref[0][j] - buf_ref[1][j]);
+            max_diff = fmax(max_diff, diff);
+            if (diff > eps)
             {
                 retval = false;
                 break;
