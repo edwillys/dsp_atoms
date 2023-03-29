@@ -31,12 +31,14 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/UpFirDownTests.cpp
     ${CMAKE_SOURCE_DIR}/AtomBiquadTests.cpp
     ${CMAKE_SOURCE_DIR}/AtomGainTests.cpp
+    ${CMAKE_SOURCE_DIR}/AtomDiodeTests.cpp
     ${CMAKE_SOURCE_DIR}/TestUtils.cpp
     ${CMAKE_SOURCE_DIR}/../src/Sample.cpp
     ${CMAKE_SOURCE_DIR}/../src/Resampler.cpp
     ${CMAKE_SOURCE_DIR}/../src/UpFirDown.cpp
     ${CMAKE_SOURCE_DIR}/../src/AtomBiquad.cpp
     ${CMAKE_SOURCE_DIR}/../src/AtomGain.cpp
+    ${CMAKE_SOURCE_DIR}/../src/AtomDiode.cpp
 )
 
 # Only needed if __builtin_assume_aligned is used
