@@ -32,7 +32,8 @@ protected:
     {
     }
 
-    void MySetUp(cint32_t nch, cint32_t nel, std::string ext = ".wav")
+    void MySetUp(cint32_t nch, cint32_t nel,
+                 std::string ext = ".wav", std::string fpath_base = "")
     {
         m_NumCh = nch;
         m_NumEl = nel;
@@ -55,8 +56,11 @@ protected:
 
         auto test_info = ::testing::UnitTest::GetInstance()->current_test_info();
         m_BaseDir = fs::absolute(__FILE__).parent_path();
-        auto fpath_base = std::string(test_info->test_suite_name()) + "_" +
-                          std::string(test_info->name()) + ext;
+        if (fpath_base.empty())
+        {
+            fpath_base = std::string(test_info->test_suite_name()) + "_" +
+                         std::string(test_info->name()) + ext;
+        }
         m_PathOut = m_BaseDir / "out" / fpath_base;
         m_PathRef = m_BaseDir / "ref" / fpath_base;
     }
@@ -146,7 +150,7 @@ std::vector<std::vector<float32_t>> read_wav(const std::string &path_wav);
  * @return false
  */
 bool compare_wav(const std::string &wavL, const std::string &wavR,
-                 float32_t eps = 1.F / 32767); // approx -90dB (1 bit out of 16 for the PCM WAV)
+                 float32_t eps = 1.F / 32768); // approx -90dB (1 bit out of 16 for the PCM WAV)
 
 /**
  * @brief

@@ -125,8 +125,7 @@ diode_1N4148_float32 = diode_1N4148_float64.clone(np.float32)
 
 normalize = False
 write_wav = True
-# R = [10, 1000, 10000, 100000, 1000000]
-R = [10000]
+R = [0, 1, 10, 1000, 10000, 100000, 1000000]
 FS = 48000  # Hz
 F0 = 1  # Hz
 T = 1  # seconds

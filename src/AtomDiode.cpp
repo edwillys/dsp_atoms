@@ -102,7 +102,7 @@ void CAtomDiode::play(float32_t **const in, float32_t **const out)
 
 void CAtomDiode::set(cint32_t ch, cint32_t el, cfloat32_t value)
 {
-    float32_t targetGain = CLIP(value, 10.F, 10000000.F);
+    float32_t targetGain = CLIP(value, 0.F, 10000000.F);
 
     float32_t mupTargetGain = 1.0F;
     if (m_Normalize)

@@ -9,7 +9,16 @@
 // Helper functions
 //=============================================================
 
-class AtomDiode : public AtomTest<CAtomDiode>
+struct AtomDiodeTestParams
+{
+    float32_t gain;
+    float32_t morphTime;
+    float32_t eps;
+    int32_t nch;
+};
+
+class AtomDiode : public AtomTest<CAtomDiode>,
+                  public testing::WithParamInterface<AtomDiodeTestParams>
 {
 };
 
@@ -17,9 +26,24 @@ class AtomDiode : public AtomTest<CAtomDiode>
 // Test cases
 //=============================================================
 
-TEST_F(AtomDiode, Triangle_Diode_NoMorph_Mono_R10000)
+TEST_P(AtomDiode, Triangle_1Hz_1s_0dB)
 {
-    MySetUp(1, 1);
+    auto params = GetParam();
+
+    auto test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    auto test_suite_name = std::string(test_info->test_suite_name());
+    auto test_name = std::string(test_info->name());
+
+    auto ind = test_suite_name.find_first_of("/") + 1;
+    test_suite_name = test_suite_name.substr(ind, test_suite_name.size() - ind);
+    ind = test_name.find_first_of("/");
+    test_name = test_name.substr(0, ind);
+    auto fpath_base = test_suite_name + "_" + test_name;
+    fpath_base += "_Morph" + std::to_string(static_cast<int32_t>(params.morphTime));
+    fpath_base += "ms_" + std::to_string(params.nch);
+    fpath_base += "ch_R" + std::to_string(static_cast<int32_t>(params.gain)) + ".wav";
+
+    MySetUp(params.nch, 1, ".wav", fpath_base);
 
     auto path_in = m_BaseDir / "in" / "Triangle_1Hz_1s_0dB.wav";
     auto wav_in = read_wav(path_in.string());
@@ -32,8 +56,8 @@ TEST_F(AtomDiode, Triangle_Diode_NoMorph_Mono_R10000)
         w.resize(niter * m_Blocksize);
     }
 
-    m_Atom.setMorphMs(0.0F);
-    m_Atom.set(0, 0, 10000.0F);
+    m_Atom.setMorphMs(params.morphTime);
+    m_Atom.set(0, 0, params.gain);
 
     for (auto n = 0; n < niter; n++)
     {
@@ -44,8 +68,23 @@ TEST_F(AtomDiode, Triangle_Diode_NoMorph_Mono_R10000)
             wav_out[m_Blocksize * n + i] = m_Out[0][i];
     }
     write_wav(m_PathOut.string(), wav_out);
-    ASSERT_EQ(true, compare_wav(m_PathOut.string(), m_PathRef.string()));
+    ASSERT_EQ(true, compare_wav(m_PathOut.string(), m_PathRef.string(), params.eps));
 }
+
+std::vector<AtomDiodeTestParams> GetTests()
+{
+    return {
+        {0.F, 0.F, 2.F / 32768.F, 1},
+        {1.F, 0.F, 1.F / 32768.F, 1},
+        {10.F, 0.F, 1.F / 32768.F, 1},
+        {1000.F, 0.F, 1.F / 32768.F, 1},
+        {10000.F, 0.F, 1.F / 32768.F, 1},
+        {100000.F, 0.F, 1.F / 32768.F, 1},
+        {1000000.F, 0.F, 1.F / 32768.F, 1},
+    };
+}
+
+INSTANTIATE_TEST_SUITE_P(AtomDiodeP, AtomDiode, testing::ValuesIn(GetTests()));
 
 #if 0
 TEST_F(AtomDiode, Multisine_Diode_Morph_Stereo)
