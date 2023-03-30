@@ -53,9 +53,12 @@ protected:
     const float32_t m_TempC = 20.F;  // Temperature in Celcius
     const float32_t m_Vt = m_k * (273.F + m_TempC) / m_q;
 
-    float32_t *m_TargetGains = nullptr;
-    float32_t *m_DeltaGains = nullptr;
-    float32_t *m_Gains = nullptr;
+    float32_t *m_TargetA0 = nullptr;
+    float32_t *m_DeltaA0 = nullptr;
+    float32_t *m_A0 = nullptr;
+    float32_t *m_TargetLogA0A1 = nullptr;
+    float32_t *m_DeltaLogA0A1 = nullptr;
+    float32_t *m_LogA0A1 = nullptr;
 
     float32_t *m_MakeUpGains = nullptr;
     float32_t *m_MakeUpDeltaGains = nullptr;

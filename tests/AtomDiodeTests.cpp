@@ -11,10 +11,11 @@
 
 struct AtomDiodeTestParams
 {
-    float32_t gain;
+    std::vector<float32_t> gains;
     float32_t morphTime;
     float32_t eps;
     int32_t nch;
+    std::string fname_in;
 };
 
 class AtomDiode : public AtomTest<CAtomDiode>,
@@ -26,7 +27,7 @@ class AtomDiode : public AtomTest<CAtomDiode>,
 // Test cases
 //=============================================================
 
-TEST_P(AtomDiode, Triangle_1Hz_1s_0dB)
+TEST_P(AtomDiode, MultiUse)
 {
     auto params = GetParam();
 
@@ -36,36 +37,51 @@ TEST_P(AtomDiode, Triangle_1Hz_1s_0dB)
 
     auto ind = test_suite_name.find_first_of("/") + 1;
     test_suite_name = test_suite_name.substr(ind, test_suite_name.size() - ind);
-    ind = test_name.find_first_of("/");
-    test_name = test_name.substr(0, ind);
-    auto fpath_base = test_suite_name + "_" + test_name;
+    auto fpath_base = test_suite_name + "_" + params.fname_in;
     fpath_base += "_Morph" + std::to_string(static_cast<int32_t>(params.morphTime));
-    fpath_base += "ms_" + std::to_string(params.nch);
-    fpath_base += "ch_R" + std::to_string(static_cast<int32_t>(params.gain)) + ".wav";
+    fpath_base += "ms_" + std::to_string(params.nch) + "ch";
+    for (auto &gain : params.gains)
+    {
+        fpath_base += "_R" + std::to_string(static_cast<int32_t>(gain));
+    }
+    fpath_base += ".wav";
 
     MySetUp(params.nch, 1, ".wav", fpath_base);
 
-    auto path_in = m_BaseDir / "in" / "Triangle_1Hz_1s_0dB.wav";
+    auto path_in = m_BaseDir / "in" / (params.fname_in + ".wav");
     auto wav_in = read_wav(path_in.string());
     cint32_t niter = ((cint32_t)wav_in[0].size() + m_Blocksize - 1) / m_Blocksize;
-    std::vector<float32_t> wav_out(niter * m_Blocksize);
+    std::vector<std::vector<float32_t>> wav_out(wav_in.size());
+    // Allocate output WAV buffer
+    for (auto &w : wav_out)
+        w.resize(niter * m_Blocksize);
 
     // Extend and fill with zeros if WAV file is not divisible by m_Blocksize
     for (auto &w : wav_in)
-    {
         w.resize(niter * m_Blocksize);
-    }
 
     m_Atom.setMorphMs(params.morphTime);
-    m_Atom.set(0, 0, params.gain);
+
+    auto iter_change = niter / params.gains.size();
+    uint32_t n_changes = 0U;
 
     for (auto n = 0; n < niter; n++)
     {
-        for (auto i = 0; i < m_Blocksize; i++)
-            m_In[0][i] = wav_in[0][m_Blocksize * n + i];
+        for (auto ch = 0; ch < wav_in.size(); ch++)
+            for (auto i = 0; i < m_Blocksize; i++)
+                m_In[ch][i] = wav_in[ch][m_Blocksize * n + i];
+
+        if (n == n_changes * iter_change)
+        {
+            for (auto ch = 0; ch < wav_in.size(); ch++)
+                m_Atom.set(ch, 0, params.gains[n_changes]);
+            n_changes++;
+        }
+
         m_Atom.play(m_In, m_Out);
-        for (auto i = 0; i < m_Blocksize; i++)
-            wav_out[m_Blocksize * n + i] = m_Out[0][i];
+        for (auto ch = 0; ch < wav_in.size(); ch++)
+            for (auto i = 0; i < m_Blocksize; i++)
+                wav_out[ch][m_Blocksize * n + i] = m_Out[ch][i];
     }
     write_wav(m_PathOut.string(), wav_out);
     ASSERT_EQ(true, compare_wav(m_PathOut.string(), m_PathRef.string(), params.eps));
@@ -74,13 +90,20 @@ TEST_P(AtomDiode, Triangle_1Hz_1s_0dB)
 std::vector<AtomDiodeTestParams> GetTests()
 {
     return {
-        {0.F, 0.F, 2.F / 32768.F, 1},
-        {1.F, 0.F, 1.F / 32768.F, 1},
-        {10.F, 0.F, 1.F / 32768.F, 1},
-        {1000.F, 0.F, 1.F / 32768.F, 1},
-        {10000.F, 0.F, 1.F / 32768.F, 1},
-        {100000.F, 0.F, 1.F / 32768.F, 1},
-        {1000000.F, 0.F, 1.F / 32768.F, 1},
+        // Mono, single gains, no morph
+        {{0.F}, 0.F, 2.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
+        {{1.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
+        {{10.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
+        {{1000.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
+        {{10000.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
+        {{100000.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
+        {{1000000.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
+        // Mono, multiple gains, no morph
+        {{10000.F, 1000000.F}, 0.F, 1.F / 32768.F, 1, "Multisine_100_1k_10k_3s"},
+        // Mono, multiple gains, morph 200ms
+        {{10000.F, 1000000.F}, 200.F, 1.F / 32768.F, 1, "Multisine_100_1k_10k_3s"},
+        // 2ch, multiple gains, morph 200ms
+        {{10000.F, 1000000.F}, 200.F, 1.F / 32768.F, 2, "Multisine_100_1k_10k_3s_2ch"},
     };
 }
 
