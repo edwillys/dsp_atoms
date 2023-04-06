@@ -5,6 +5,10 @@ from scipy.special import lambertw as lambertw
 from scipy.special import wrightomega as wrightomega
 import matplotlib.pyplot as plt
 from os import path as osp
+from PySpice.Probe.Plot import plot
+from PySpice.Spice.Library import SpiceLibrary
+from PySpice.Spice.Netlist import Circuit
+from PySpice.Unit import *
 
 
 class diode:
@@ -99,7 +103,7 @@ class diode:
             "y_2d": y_2d,
             "y_2d_simp": y_2d_simp,
             "y_2d_omega": y_2d_omega,
-            "y_2d_dangelo": y_2d_dangelo,
+            "y_2d_dangelo": y_2d_dangelo
         }
 
         dic_extra = {
@@ -109,6 +113,43 @@ class diode:
 
         return dic_y, dic_extra
 
+
+normalize = False
+write_wav = True
+R = [0, 1, 10, 1000, 10000, 100000, 1000000]
+# R = [1000]
+FS = 48000  # Hz
+temp_c = 20
+A = 1 # amplitude, linear
+T = 1  # seconds
+
+# Ground truth: spice model
+IS = 4.352E-9
+N = 1.906
+RS = 0.6458
+CJO = 7.048E-13
+VJ = 0.869
+M = 0.03
+TT = 3.48E-9
+circuit = Circuit('Diode Distortion')
+circuit.model("MyDiode", "D",
+              IS=IS,
+              N=N,
+              RS=RS,
+              CJO=CJO,
+              VJ=VJ,
+              M=M,
+              TT=TT,
+              # BV=BV,
+              # IBV=IBV,
+              # FC=FC,
+              )
+# Triangular wave
+source = circuit.PieceWiseLinearVoltageSource(
+    'in', 'input', circuit.gnd, values=[(0, 0), (0.25*T, A), (0.75*T, -A), (T, 0)])
+circuit_r = circuit.R('R', 'input', 'output', 100@u_Ω)
+circuit.Diode('D1', 'output', circuit.gnd, model='MyDiode')
+circuit.Diode('D2', circuit.gnd, 'output', model='MyDiode')
 
 # 1N4148
 diode_1N4148_float64 = diode(
@@ -123,34 +164,27 @@ diode_1N4148_float64 = diode(
 )
 diode_1N4148_float32 = diode_1N4148_float64.clone(np.float32)
 
-normalize = False
-write_wav = True
-R = [0, 1, 10, 1000, 10000, 100000, 1000000]
-FS = 48000  # Hz
-F0 = 1  # Hz
-T = 1  # seconds
-t = np.linspace(0, T, FS)
-Vin = signal.sawtooth(2.0 * np.pi * F0 * t + 0.5 * np.pi * F0, 0.5)
-
-if write_wav:
-    amplitude = np.iinfo(np.int16).max
-    data = amplitude * Vin
-    wavfile.write(
-        "Triangle_1Hz_1s_0dB.wav", 48000, data.astype(np.int16) )
-
 plt.figure()
 plt.title('Vout/Vin')
 
-max_diff_approx = 0
 max_diff_model = 0
 max_diff_dtype = 0
 max_diff_omega = 0
 min_w0 = np.inf
 
-plt.plot(t, Vin, label="Vin")
 for r in R:
-    y_f64, extra_f64 = diode_1N4148_float64.calc(Vin, r)
-    y_f32, extra_f32 = diode_1N4148_float32.calc(Vin, r)
+    # Spice model
+    circuit_r.resistance = r
+    simulator = circuit.simulator(
+        temperature=temp_c, nominal_temperature=temp_c)
+    # analysis = simulator.dc(Vin=Vsl)
+    analysis = simulator.transient(step_time=1/FS, end_time=T)
+    y_spice = np.array(analysis["output"])
+    Vin = np.array(analysis["input"])
+    t = np.array(analysis.time)
+
+    y_f64, extra_f64 = diode_1N4148_float64.calc(Vin, r, temp_c)
+    y_f32, extra_f32 = diode_1N4148_float32.calc(Vin, r, temp_c)
 
     for key in y_f64:
         y_f64[key] = np.real(y_f64[key])
@@ -161,16 +195,13 @@ for r in R:
             y_f64[key] = y_f64[key] / max(abs(y_f64[key]))
             y_f32[key] = y_f32[key] / max(abs(y_f32[key]))
 
-    diff_model = max(abs(y_f64["y_2d_simp"]-y_f64["y_2d"]))
+    diff_model = max(abs(y_f64["y_2d_simp"]-y_spice))
     max_diff_model = max(diff_model, max_diff_model)
-
-    max_diff_approx = max(abs(y_f64["y_2d_dangelo"]-y_f64["y_2d_simp"]))
-    max_diff_approx = max(max_diff_approx, max_diff_approx)
 
     diff_dtype = max(abs(y_f64["y_2d_simp"]-y_f32["y_2d_simp"]))
     max_diff_dtype = max(diff_dtype, max_diff_dtype)
 
-    diff_omega = max(abs(y_f64["y_2d_simp"]-y_f32["y_2d_omega"]))
+    diff_omega = max(abs(y_f64["y_2d_simp"]-y_spice))
     max_diff_omega = max(diff_omega, max_diff_omega)
 
     w0 = np.abs(1.0 / (2.0 * np.pi * extra_f64["tau"]))
@@ -180,12 +211,22 @@ for r in R:
         amplitude = np.iinfo(np.int16).max
         data = amplitude * y_f32["y_2d_omega"]
         wavfile.write(
-            f"Triangle_Diode_1Hz_1s_0dB_R{r}.wav", 48000, data.astype(np.int16) )
+            f"AtomDiode_Triangle_1Hz_1s_0dB_Morph0ms_1ch_R{r}.wav", 48000, data.astype(np.int16))
 
-    plt.plot(t, y_f64["y_2d"], label=f"Lambert@R={str(r)}")
+    # plt.plot(t, y_f64["y_2d_simp"], label=f"Lambert@R={str(r)}")
     plt.plot(t, y_f64["y_2d_omega"], label=f"Omega@R={str(r)}")
-    # plt.plot(t, y["y_2d_dangelo"] / max(abs(y["y_2d_dangelo"])), label=f"Dangelo@R={str(r)}")
-    # plt.plot(t, 20 * np.log10(abs(y_2d_dangelo - y_2d_simp)), label=f"Diff@R={str(r)}")
+    plt.plot(t, y_spice, label=f"Spice@R={str(r)}")
+    # plt.plot(
+    #    t, 20 * np.log10(abs(y_f64["y_2d_simp"] - y_spice)), label=f"Diff@R={str(r)}")
+
+# Plot Vin after because it is the same for all Rs in the loop above
+plt.plot(t, Vin, label="Vin")
+
+if write_wav:
+    amplitude = np.iinfo(np.int16).max
+    data = amplitude * Vin
+    wavfile.write(
+        "Triangle_1Hz_1s_0dB.wav", 48000, data.astype(np.int16))
 
 # TANH model
 # k = 2.3
@@ -216,8 +257,6 @@ plt.grid(which='both', axis='both')
 plt.legend()
 
 print(
-    f"Max diff approx: {20.0 * np.log10(max_diff_approx):.1f}dB")
-print(
     f"Max diff model: {20.0 * np.log10(max_diff_model):.1f}dB")
 print(
     f"Max diff dtype: {20.0 * np.log10(max_diff_dtype):.1f}dB")
@@ -225,9 +264,6 @@ print(
     f"Max diff omega: {20.0 * np.log10(max_diff_omega):.1f}dB")
 print(
     f"Min cutoff freq: {min_w0:.1f}Hz")
-
-# plt.plot(Vin, y_2d_simp, 'g')
-
 
 if False:
     # Observable values for analysis

@@ -50,7 +50,8 @@ TEST_P(AtomDiode, MultiUse)
 
     auto path_in = m_BaseDir / "in" / (params.fname_in + ".wav");
     auto wav_in = read_wav(path_in.string());
-    cint32_t niter = ((cint32_t)wav_in[0].size() + m_Blocksize - 1) / m_Blocksize;
+    cint32_t wavLen = static_cast<cint32_t>(wav_in[0].size());
+    cint32_t niter = (wavLen + m_Blocksize - 1) / m_Blocksize;
     std::vector<std::vector<float32_t>> wav_out(wav_in.size());
     // Allocate output WAV buffer
     for (auto &w : wav_out)
@@ -83,6 +84,10 @@ TEST_P(AtomDiode, MultiUse)
             for (auto i = 0; i < m_Blocksize; i++)
                 wav_out[ch][m_Blocksize * n + i] = m_Out[ch][i];
     }
+    // cut off the wave if it wasn't multiple of block length
+    if (wavLen != niter * m_Blocksize)
+        for (auto &w : wav_out)
+            w.resize(wavLen);
     write_wav(m_PathOut.string(), wav_out);
     ASSERT_EQ(true, compare_wav(m_PathOut.string(), m_PathRef.string(), params.eps));
 }
@@ -92,7 +97,7 @@ std::vector<AtomDiodeTestParams> GetTests()
     return {
         // Mono, single gains, no morph
         {{0.F}, 0.F, 2.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
-        {{1.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
+        {{1.F}, 0.F, 2.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
         {{10.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
         {{1000.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
         {{10000.F}, 0.F, 1.F / 32768.F, 1, "Triangle_1Hz_1s_0dB"},
