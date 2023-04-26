@@ -115,7 +115,7 @@ class diode:
 
 
 normalize = False
-write_wav = True
+write_wav = False
 R = [0, 1, 10, 1000, 10000, 100000, 1000000]
 # R = [1000]
 FS = 48000  # Hz
@@ -124,32 +124,16 @@ A = 1 # amplitude, linear
 T = 1  # seconds
 
 # Ground truth: spice model
-IS = 4.352E-9
-N = 1.906
-RS = 0.6458
-CJO = 7.048E-13
-VJ = 0.869
-M = 0.03
-TT = 3.48E-9
 circuit = Circuit('Diode Distortion')
-circuit.model("MyDiode", "D",
-              IS=IS,
-              N=N,
-              RS=RS,
-              CJO=CJO,
-              VJ=VJ,
-              M=M,
-              TT=TT,
-              # BV=BV,
-              # IBV=IBV,
-              # FC=FC,
-              )
 # Triangular wave
 source = circuit.PieceWiseLinearVoltageSource(
     'in', 'input', circuit.gnd, values=[(0, 0), (0.25*T, A), (0.75*T, -A), (T, 0)])
 circuit_r = circuit.R('R', 'input', 'output', 100@u_Ω)
-circuit.Diode('D1', 'output', circuit.gnd, model='MyDiode')
-circuit.Diode('D2', circuit.gnd, 'output', model='MyDiode')
+fpath = osp.dirname(osp.abspath(__file__))
+spice_library = SpiceLibrary(osp.join(fpath, "spicelib"))
+circuit.include(spice_library['1N4148'])
+circuit.Diode('D1', 'output', circuit.gnd, model='1N4148')
+circuit.Diode('D2', circuit.gnd, 'output', model='1N4148')
 
 # 1N4148
 diode_1N4148_float64 = diode(
