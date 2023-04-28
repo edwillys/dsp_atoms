@@ -41,16 +41,10 @@ class jfet:
         self.ch_len_mod = True
         # Spice parameters
         self.type = type
-        BETA = type(BETA)  # Transconductance coefficient (A/V^2)
-        LAMBDA = type(LAMBDA)  # Channel-length modulation (1/V)
-        VTO = type(VTO)  # Thresold voltage (V)
         # Circuit's drain ohmic resistance combined with the internal one (Ohm)
-        RD = type(RD+RDI)
+        RD = RD + RDI
         # Circuit's source ohmic resistance combined with the internal one (Ohm)
-        RS = type(RS+RSI)
-        RDI = type(RDI)  # JFET's iunternal drain ohmic resistance (Ohm)
-        RSI = type(RSI)  # JFET's iunternal source ohmic resistance (Ohm)
-        VDD = type(VDD)  # Power supply (V)
+        RS = RS + RSI
         RDS = RD + RS  # Intermediate variable that simplifies some calculations
 
         # 3rd degree polynomial coeffs for the Id in the triode (linear) region
@@ -136,14 +130,69 @@ class jfet:
             BETA*LAMBDA*RDS
         ]
 
-        self.BETA = BETA
-        self.LAMBDA = LAMBDA
-        self.VTO = VTO
-        self.RD = RD
-        self.RS = RS
-        self.RDI = RDI
-        self.RSI = RSI
-        self.VDD = VDD
+        # Value for VG at the limit region between triode and saturation
+        # There are 2 solutions for the equation ID - BETA * (VDD - ID * RDS)**2
+        # Out of which only one makes sense physically
+        id_sat = np.array([
+            (2*BETA*RDS*VDD - np.sqrt(4*BETA*RDS*VDD + 1) + 1)/(2*BETA*RDS**2),
+            (2*BETA*RDS*VDD + np.sqrt(4*BETA*RDS*VDD + 1) + 1)/(2*BETA*RDS**2)
+        ])
+        vd = VDD - id_sat * RD
+        vg = vd + VTO
+        vs = id_sat * RS
+        vds = vd - vs
+        if id_sat[0] > 0 and vds[0] > 0:
+            self.vg_limit = type(vg[0])
+        elif id_sat[1] > 0 and vds[1] > 1:
+            self.vg_limit = type(vg[1])
+        else:
+            print("Error! At least one value of VGT should make sense")
+
+        # type assignment
+        self.BETA = type(BETA)
+        self.LAMBDA = type(LAMBDA)
+        self.VTO = type(VTO)
+        self.RD = type(RD)
+        self.RS = type(RS)
+        self.RDS = type(RDS)
+        self.RDI = type(RDI)
+        self.RSI = type(RSI)
+        self.VDD = type(VDD)
+        self.c_tri = [type(c) for c in self.c_tri]
+        self.c_tri_vgt = [type(c) for c in self.c_tri_vgt]
+        self.c_tri_diff = [type(c) for c in self.c_tri_diff]
+        self.c_tri_diff_vgt = [type(c) for c in self.c_tri_diff_vgt]
+        self.c_sat = [type(c) for c in self.c_sat]
+        self.c_sat_vgt = [type(c) for c in self.c_sat_vgt]
+        self.c_sat_vgt2 = [type(c) for c in self.c_sat_vgt2]
+        self.c_sat_diff = [type(c) for c in self.c_sat_diff]
+        self.c_sat_diff_vgt = [type(c) for c in self.c_sat_diff_vgt]
+        self.c_sat_diff_vgt2 = [type(c) for c in self.c_sat_diff_vgt2]
+
+        # Get the correct solution for the id_sat and id_tri, by making some sanity checks
+        vgt_above = self.vg_limit + 0.1 - VTO  # slightly above the limit
+        vgt_below = self.vg_limit - 0.1 - VTO  # slightly below the limit
+
+        ind_sat = np.array([
+            self.sanity_check_sat(self.f_sat(vgt_above), vgt_above),
+            self.sanity_check_sat(self.f_sat(vgt_below), vgt_below),
+        ])
+        ind_tri = np.array([
+            self.sanity_check_tri(self.f_tri(vgt_above), vgt_above),
+            self.sanity_check_tri(self.f_tri(vgt_below), vgt_below),
+        ])
+        if ind_sat[0] != None and ind_sat[1] == None and \
+                ind_tri[0] == None and ind_tri[1] != None:
+            self.region_above_vg_limit = "sat"
+            self.sign_sat = ['+', '-'][ind_sat[0]]
+            self.sign_tri = ['+', '-'][ind_tri[1]]
+        elif ind_sat[0] == None and ind_sat[1] != None and \
+                ind_tri[0] != None and ind_tri[1] == None:
+            self.region_above_vg_limit = "tri"
+            self.sign_sat = ['+', '-'][ind_sat[1]]
+            self.sign_tri = ['+', '-'][ind_tri[0]]
+        else:
+            print("Error! Id sanity checks don't make sense")
 
     def clone(self, dtype):
         o = jfet(
@@ -180,6 +229,126 @@ class jfet:
         f_x0_diff = np.polyval(c_diff, id)
         return id - f_x0 / f_x0_diff
 
+    def sanity_check_tri(self, id, vgt):
+        if np.isnan(id).any():
+            return None
+        vs = id * self.RS
+        vgs_m_vt = vgt - vs
+        vds_m_vt = self.VDD - id * self.RDS
+        inds = (vds_m_vt <= vgs_m_vt) & (vgs_m_vt > 0) & (id > 0)
+        if inds.any():
+            return inds.argmax()  # return the index of True, which is the max value
+        else:
+            return None
+
+    def sanity_check_sat(self, id, vgt):
+        if np.isnan(id).any():
+            return None
+        vs = id * self.RS
+        vgs_m_vt = vgt - vs
+        vds_m_vt = self.VDD - id * self.RDS
+        inds = (vds_m_vt > vgs_m_vt) & (vgs_m_vt > 0) & (id > 0)
+        if inds.any():
+            return inds.argmax()  # return the index of True, which is the max value
+        else:
+            return None
+
+    def opt_sat(self, id, vgt):
+        # Newton–Raphson optimization
+        id = self.optimize_chlenmod(id, vgt, self.c_sat, self.c_sat_diff, self.c_sat_vgt,
+                                    self.c_sat_diff_vgt, self.c_sat_vgt2, self.c_sat_diff_vgt2)
+        id = self.optimize_chlenmod(id, vgt, self.c_sat, self.c_sat_diff, self.c_sat_vgt,
+                                    self.c_sat_diff_vgt, self.c_sat_vgt2, self.c_sat_diff_vgt2)
+        # Sanity clip, as Id is not allowed to be negative
+        # TODO: why does this happen?
+        return np.clip(id, 0, None)
+
+    def f_sat(self, vgt, sign=None, opt=None):
+        beta_2 = 2 * self.BETA
+        beta_2_rs_vgt = beta_2 * self.RS * vgt
+        delta = 2 * beta_2_rs_vgt + 1
+        id_pos = (beta_2_rs_vgt + np.sqrt(delta) + 1) / (beta_2*self.RS**2)
+        id_neg = (beta_2_rs_vgt - np.sqrt(delta) + 1) / (beta_2*self.RS**2)
+
+        if opt == True or (opt == None and self.ch_len_mod):
+            id_pos = self.opt_sat(id_pos, vgt)
+            id_neg = self.opt_sat(id_neg, vgt)
+
+        if not sign:
+            return np.array([
+                id_pos,
+                id_neg,
+            ])
+        elif sign == '+':
+            return id_pos
+        else:
+            return id_neg
+
+    def opt_tri(self, id, vgt):
+        # Newton–Raphson optimization
+        id = self.optimize_chlenmod(id, vgt, self.c_tri, self.c_tri_diff, self.c_tri_vgt,
+                                    self.c_tri_diff_vgt)
+        id = self.optimize_chlenmod(id, vgt, self.c_tri, self.c_tri_diff, self.c_tri_vgt,
+                                    self.c_tri_diff_vgt)
+        # Sanity clip, as Id is not allowed to be negative
+        # TODO: why does this happen?
+        return np.clip(id, 0, None)
+
+    def f_tri(self, vgt, sign=None, opt=None):
+        beta_rs = self.BETA * self.RS
+        rds = (self.RD + self.RS)
+        beta_rds = self.BETA * rds
+        beta_sq = self.BETA ** 2
+        rds_sq = rds ** 2
+        delta = 4*beta_sq*rds_sq*vgt**2 - 8*beta_sq*rds*self.RS*self.VDD*vgt + 4*beta_sq * \
+            self.RS**2*self.VDD**2 - 4*beta_rds*self.VDD + \
+            4*beta_rds*vgt + 4*beta_rs*self.VDD + 1
+        id_pos = (beta_rds*self.VDD - beta_rds*vgt - beta_rs *
+                  self.VDD + np.sqrt(delta)/2 - 1/2)/(beta_rds*(rds - 2*self.RS))
+        id_neg = (beta_rds*self.VDD - beta_rds*vgt - beta_rs *
+                  self.VDD - np.sqrt(delta)/2 - 1/2)/(beta_rds*(rds - 2*self.RS))
+
+        if opt == True or (opt == None and self.ch_len_mod):
+            id_pos = self.opt_tri(id_pos, vgt)
+            id_neg = self.opt_tri(id_neg, vgt)
+
+        if not sign:
+            return np.array([
+                id_pos,
+                id_neg,
+            ])
+        elif sign == '+':
+            return id_pos
+        else:
+            return id_neg
+
+    def calc_opt(self, Vin, temp_c=20.0):
+        Vgt = Vin - self.VTO
+        Id = np.zeros(len(Vgt))
+
+        if self.region_above_vg_limit == "tri":
+            ind_sat = (Vin < self.vg_limit) & (Vgt > 0)
+            ind_tri = (Vin >= self.vg_limit) & (Vgt > 0)
+        else:
+            ind_sat = (Vin >= self.vg_limit) & (Vgt > 0)
+            ind_tri = (Vin < self.vg_limit) & (Vgt > 0)
+
+        vgt_sat = Vgt[ind_sat]
+        vgt_tri = Vgt[ind_tri]
+        id_sat = self.f_sat(vgt_sat, self.sign_sat)
+        id_tri = self.f_tri(vgt_tri, self.sign_tri)
+
+        Id[ind_sat] = id_sat
+        Id[ind_tri] = id_tri
+
+        y = self.VDD - Id * (self.RD - self.RDI)
+
+        dic_y = {
+            "y_id": Id,
+            "y_vout": y
+        }
+        return dic_y
+
     def calc(self, Vin, temp_c=20.0):
         Vgt = Vin - self.VTO
         Id = np.zeros(len(Vgt))
@@ -205,10 +374,8 @@ class jfet:
         beta_2 = 2 * self.BETA
         beta_2_rs_vgt = beta_2 * self.RS * Vgt
         delta = 2 * beta_2_rs_vgt + 1
-        Id_sat[0] = (beta_2_rs_vgt - np.sqrt(delta) + 1) / \
-            (beta_2*self.RS**2)
-        Id_sat[1] = (beta_2_rs_vgt + np.sqrt(delta) + 1) / \
-            (beta_2*self.RS**2)
+        Id_sat[0] = (beta_2_rs_vgt - np.sqrt(delta) + 1) / (beta_2*self.RS**2)
+        Id_sat[1] = (beta_2_rs_vgt + np.sqrt(delta) + 1) / (beta_2*self.RS**2)
 
         if self.ch_len_mod:
             # Newton–Raphson optimization
@@ -264,7 +431,8 @@ class jfet:
 
 
 def main():
-    calc_jfet_coeffs = True
+    print_coeffs = True
+    print_limit = False
     write_wav = False
     F0 = 20  # [Hz]
     FS = 48000  # [Hz]
@@ -287,8 +455,8 @@ def main():
     Rload = 10E3
     # C1 = 10E-6
     Cout = 10E-6
-    Rgains = [1E3, 5E3]
-    # Rgains = [1E3]
+    # Rgains = [1E3, 5E3]
+    Rgains = [1E3]
 
     # Netlist
     circuit.V('Vdd', 'vdd', circuit.gnd, Vdd)
@@ -314,11 +482,11 @@ def main():
             nfj_models[x.name] = spice_params
     model_spice_params = nfj_models[model]
 
-    if calc_jfet_coeffs:
-        Svdd, Sid, Srds, Svgt, Srs, Sbeta, Slambda = symbols(
-            'VDD ID RDS VGT RS BETA LAMBDA')
-        Svds = Svdd - Sid * Srds
-        SChLenMod = 1 + Slambda * Svds
+    Svdd, Sid, Srds, Svgt, Srs, Sbeta, Slambda = symbols(
+        'VDD ID RDS VGT RS BETA LAMBDA')
+    Svds = Svdd - Sid * Srds
+    SChLenMod = 1 + Slambda * Svds
+    if print_coeffs:
 
         # Triode region
         # Complete equation, from which the derivative is taken and
@@ -386,6 +554,7 @@ def main():
         for i, s in enumerate(sol):
             print(f"  [{i}]: {simplify(s)}")
 
+    if print_limit:
         # limit region
         # Vds = Vgs - Vt
         # Vds = Vdd - Id * Rds
@@ -437,8 +606,6 @@ def main():
         else:
             print(f"Test succeeded for all NJF")
 
-        print("\n--------------------------------------------------------------------------------\n")
-
     plt.figure()
     max_diff_model_id = 0
     max_diff_model_vout = 0
@@ -476,7 +643,8 @@ def main():
             type=np.float64
         )
         jfet_float32 = jfet_float64.clone(np.float32)
-        y_f64 = jfet_float64.calc(Vin_spice * Rg2 / (Rg2 + Rg1), temp_c)
+        # y_f64 = jfet_float64.calc(Vin_spice * Rg2 / (Rg2 + Rg1), temp_c)
+        y_f64 = jfet_float64.calc_opt(Vin_spice * Rg2 / (Rg2 + Rg1), temp_c)
         y_f32 = jfet_float32.calc(Vin_spice * Rg2 / (Rg2 + Rg1), temp_c)
 
         if write_wav:
@@ -498,15 +666,15 @@ def main():
 
         # Current subplot
         plt.subplot(211)
-        plt.plot(t, y_f64["y_id"], label=f"Id_model@R={str(rs)}")
-        plt.plot(t, y_id_spice, label=f"Id_spice@R={str(rs)}")
+        # plt.plot(t, y_f64["y_id"], label=f"Id_model@R={str(rs)}")
+        # plt.plot(t, y_id_spice, label=f"Id_spice@R={str(rs)}")
         plt.plot(t, abs(y_f64["y_id"] - y_id_spice), label=f"Diff@R={str(rs)}")
         # Voltage subplot
         plt.subplot(212)
         # plt.plot(t, y_vgt_spice, label=f"Vgt_spice@R={str(rs)}")
         # plt.plot(t, y_limit_spice, label=f"Vds-Vgt@R={str(rs)}")
-        plt.plot(t, y_vout_spice, label=f"Vout_spice@R={str(rs)}")
-        plt.plot(t, y_f64["y_vout"], label=f"Vout_model@R={str(rs)}")
+        # plt.plot(t, y_vout_spice, label=f"Vout_spice@R={str(rs)}")
+        # plt.plot(t, y_f64["y_vout"], label=f"Vout_model@R={str(rs)}")
         plt.plot(t, abs(y_f64["y_vout"] - y_vout_spice),
                  label=f"Diff@R={str(rs)}")
 
